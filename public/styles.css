@@ -29,7 +29,7 @@ a { color: inherit; }
 
 .site-header, .site-footer { max-width: 1120px; margin: 0 auto; padding: 1.35rem 2rem; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: .75rem; text-decoration: none; }
-.brand-mark { width: 2.55rem; height: 2.55rem; display: grid; place-items: center; border-radius: .75rem; background: var(--navy); color: white; font-weight: 800; font-size: .78rem; letter-spacing: .08em; }
+.brand-mark { width: 2.55rem; height: 2.55rem; display: block; flex: 0 0 auto; }
 .brand-copy { display: grid; line-height: 1.15; }
 .brand-copy strong { letter-spacing: -.02em; }
 .brand-copy small { margin-top: .2rem; color: var(--muted); font-size: .72rem; }
@@ -164,4 +164,3 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; }
 }
-
