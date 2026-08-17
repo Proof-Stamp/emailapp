@@ -205,7 +205,7 @@ async function verify() {
   els.verifyResult.hidden = true
   const expected = extractSha256(els.expectedHash.value)
   const file = selectedVerifyFile
-  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint or the full ProofStamp email receipt.')
+  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint or the full ProofStamp email.')
   if (!file) return showAlert(els.verifyAlert, 'Choose the file you want to check.')
   if (file.size > MAX_FILE_SIZE_BYTES) return showAlert(els.verifyAlert, 'Choose a file smaller than 50 MB.')
   els.verifyButton.disabled = true
@@ -216,10 +216,10 @@ async function verify() {
     els.verifyResult.hidden = false
     els.verifyResult.className = `verify-result ${match ? 'match' : 'mismatch'}`
     els.verifyResultIcon.textContent = match ? '✓' : '×'
-    els.verifyResultTitle.textContent = match ? 'This file matches the receipt' : 'This file does not match the receipt'
+    els.verifyResultTitle.textContent = match ? 'This file matches the ProofStamp' : 'This file does not match the ProofStamp'
     els.verifyResultCopy.textContent = match
-      ? 'The file has exactly the same contents as the file used to make the receipt.'
-      : 'This is a different file, or the file changed after the receipt was created.'
+      ? 'The file has exactly the same contents as the file used to make the ProofStamp.'
+      : 'This is a different file, or the file changed after the ProofStamp was created.'
     els.actualHash.textContent = actual
   } catch {
     showAlert(els.verifyAlert, 'This browser could not read that file. Try choosing it again.')
