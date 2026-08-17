@@ -45,18 +45,18 @@ export function createReceipt({
 
 export function receiptToText(receipt) {
   const lines = [
-    'PROOFSTAMP EMAIL RECEIPT', '',
-    'This receipt stores a unique fingerprint for the file described below.', '',
+    'PROOFSTAMP', '',
+    'This ProofStamp stores a unique fingerprint for the file described below.', '',
     `Description: ${receipt.description}`,
     ...(receipt.file_name ? [`Filename: ${receipt.file_name}`] : []),
     `File size: ${formatBytes(receipt.file_size_bytes)} (${receipt.file_size_bytes} bytes)`,
     `Media type: ${receipt.media_type}`,
     `File fingerprint (SHA-256): ${receipt.hash}`,
-    `Receipt created on this device: ${receipt.created_at_device}`, '',
+    `ProofStamp created on this device: ${receipt.created_at_device}`, '',
     `Check this file later: ${receipt.verification_url}`, '',
-    'Keep the original file. If its fingerprint matches this receipt later, the file has not changed.', '',
-    'WHAT THIS RECEIPT DOES NOT PROVE',
-    'It does not prove when or where the file was originally created, who made it, whether it was edited before the receipt, or whether its contents are true. The email received time is a practical record of when the receipt reached your inbox.'
+    'Keep the original file. If its fingerprint matches this ProofStamp later, the file has not changed.', '',
+    'WHAT A PROOFSTAMP DOES NOT PROVE',
+    'It does not prove when or where the file was originally created, who made it, whether it was edited before the ProofStamp, or whether its contents are true. The email received time records when the ProofStamp reached your inbox.'
   ]
   return lines.join('\n')
 }
@@ -65,7 +65,7 @@ export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
   if (!isValidEmail(primaryEmail)) throw new TypeError('A valid primary email is required.')
   if (secondEmail && !isValidEmail(secondEmail)) throw new TypeError('The second email is invalid.')
 
-  const subject = `ProofStamp file record: ${receipt.description.slice(0, 80)}`
+  const subject = `ProofStamp: ${receipt.description.slice(0, 80)}`
   const params = new URLSearchParams({ subject, body: receiptToText(receipt) })
   if (secondEmail) params.set('cc', secondEmail)
   return `mailto:${encodeURIComponent(primaryEmail)}?${params.toString()}`
@@ -78,7 +78,7 @@ export function parseReceiptJson(text) {
     parsed?.hash_algorithm !== 'SHA-256' ||
     !isSha256(String(parsed?.hash || ''))
   ) {
-    throw new TypeError('Invalid ProofStamp receipt.')
+    throw new TypeError('Invalid ProofStamp file.')
   }
   return { ...parsed, hash: parsed.hash.toLowerCase() }
 }
