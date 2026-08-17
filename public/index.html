@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#071b2c" />
     <meta
       name="description"
-      content="Create a private SHA-256 receipt and email it to yourself. Your file never leaves your device."
+      content="Create a private ProofStamp for a file and email it to yourself. Your file never leaves your device."
     />
-    <title>ProofStamp Email Receipt</title>
+    <title>ProofStamp for Important Files</title>
     <link rel="icon" href="/proofstamp-seal.svg" type="image/svg+xml" />
     <link
       rel="preload"
@@ -23,21 +23,21 @@
     <a class="skip-link" href="#main">Skip to main content</a>
 
     <header class="site-header">
-      <a class="brand" href="/" aria-label="ProofStamp Email Receipt home">
+      <a class="brand" href="/" aria-label="ProofStamp home">
         <img class="brand-mark" src="/proofstamp-email-mark-vector.svg" width="41" height="41" alt="" />
         <span class="brand-copy">
           <strong>ProofStamp</strong>
-          <small>Email Receipt</small>
+          <small>For Important Files</small>
         </span>
       </a>
     </header>
 
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="eyebrow">A timestamped receipt for important files</div>
+        <div class="eyebrow">A timestamped record for important files</div>
         <h1 id="hero-title">Give an important file a date you can point to.</h1>
         <p>
-          Choose one file. ProofStamp creates a unique fingerprint and prepares an email receipt
+          Choose one file. ProofStamp creates a unique fingerprint and prepares a ProofStamp email
           you can send to yourself. Your file stays on your device.
         </p>
         <ul class="trust-list" aria-label="Privacy and product benefits">
@@ -47,10 +47,10 @@
         </ul>
       </section>
 
-      <section class="tool-shell" aria-label="ProofStamp email receipt tool">
+      <section class="tool-shell" aria-label="ProofStamp file tool">
         <div class="tabs" role="tablist" aria-label="Tool mode">
           <button class="tab active" id="create-tab" role="tab" aria-selected="true" aria-controls="create-panel">
-            Create receipt
+            Create ProofStamp
           </button>
           <button class="tab" id="verify-tab" role="tab" aria-selected="false" aria-controls="verify-panel">
             Check file
@@ -58,10 +58,10 @@
         </div>
 
         <section id="create-panel" class="panel" role="tabpanel" aria-labelledby="create-tab">
-          <ol class="steps" aria-label="Receipt creation progress">
+          <ol class="steps" aria-label="ProofStamp creation progress">
             <li class="step active" data-step="1"><span>1</span>Select file</li>
             <li class="step" data-step="2"><span>2</span>Add context</li>
-            <li class="step" data-step="3"><span>3</span>Email receipt</li>
+            <li class="step" data-step="3"><span>3</span>Email ProofStamp</li>
           </ol>
 
           <div id="create-alert" class="alert" role="alert" hidden></div>
@@ -153,19 +153,19 @@
                 </span>
               </label>
 
-              <button class="primary-button full-button" type="submit">Prepare email receipt</button>
+              <button class="primary-button full-button" type="submit">Prepare ProofStamp</button>
             </form>
           </section>
 
           <section class="stage success-stage" id="receipt-stage" aria-labelledby="receipt-stage-title" hidden>
             <div class="success-mark" aria-hidden="true">✓</div>
             <p class="stage-kicker">Step 3</p>
-            <h2 id="receipt-stage-title">Your email receipt is ready</h2>
-            <p class="success-intro">Open your email app, check the message, and send it to yourself.</p>
+            <h2 id="receipt-stage-title">Your ProofStamp is ready</h2>
+            <p class="success-intro">Open your email app, check the ProofStamp, and send it to yourself.</p>
 
             <div class="receipt-preview">
               <div class="receipt-preview-header">
-                <span>ProofStamp Email Receipt</span>
+                <span>ProofStamp</span>
                 <span id="receipt-provider-count">1 inbox</span>
               </div>
               <dl id="receipt-summary"></dl>
@@ -173,24 +173,24 @@
 
             <div class="action-grid">
               <button id="open-email" class="primary-button" type="button">Open email app to send</button>
-              <button id="copy-receipt" class="secondary-button" type="button">Copy receipt</button>
-              <button id="download-receipt" class="secondary-button" type="button">Download receipt</button>
+              <button id="copy-receipt" class="secondary-button" type="button">Copy ProofStamp</button>
+              <button id="download-receipt" class="secondary-button" type="button">Download ProofStamp</button>
             </div>
 
             <div class="keep-file-note">
               <strong>Keep the original file.</strong>
-              <p>You do not need to email it. Keep this exact file so you can check it against the receipt later.</p>
+              <p>You do not need to email it. Keep this exact file so you can check it against the ProofStamp later.</p>
             </div>
 
-            <button id="create-another" class="text-button centered" type="button">Create another receipt</button>
+            <button id="create-another" class="text-button centered" type="button">Create another ProofStamp</button>
           </section>
         </section>
 
         <section id="verify-panel" class="panel" role="tabpanel" aria-labelledby="verify-tab" hidden>
           <div class="verify-intro">
             <p class="stage-kicker">Check a saved file</p>
-            <h2>Does this file match the receipt?</h2>
-            <p>Choose one file and paste the fingerprint or email receipt. ProofStamp checks everything in your browser.</p>
+            <h2>Does this file match the ProofStamp?</h2>
+            <p>Choose one file and paste the fingerprint or ProofStamp email. ProofStamp checks everything in your browser.</p>
           </div>
 
           <div id="verify-alert" class="alert" role="alert" hidden></div>
@@ -212,8 +212,8 @@
           </div>
 
           <div class="field verify-fingerprint-field">
-            <label for="expected-hash">Fingerprint or email receipt</label>
-            <textarea id="expected-hash" rows="4" placeholder="Paste the fingerprint or full email receipt"></textarea>
+            <label for="expected-hash">Fingerprint or ProofStamp email</label>
+            <textarea id="expected-hash" rows="4" placeholder="Paste the fingerprint or full ProofStamp email"></textarea>
             <small>Look for the 64-character file fingerprint in your ProofStamp email.</small>
           </div>
 
@@ -243,7 +243,7 @@
           </article>
           <article>
             <span class="explanation-number">02</span>
-            <h3>Email the receipt</h3>
+            <h3>Email the ProofStamp</h3>
             <p>Your inbox stores the fingerprint, your description, and the email received time.</p>
           </article>
           <article>
@@ -253,18 +253,18 @@
           </article>
         </div>
         <div class="limitation">
-          <strong>What this receipt does not prove</strong>
+          <strong>What a ProofStamp does not prove</strong>
           <p>
             It does not prove when or where the file was originally created, who made it, whether it was edited before
-            the receipt, or whether its contents are true. The email received time is a practical record of when
-            the receipt reached your inbox.
+            the ProofStamp, or whether its contents are true. The email received time records when
+            the ProofStamp reached your inbox.
           </p>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <span>ProofStamp Email Receipt</span>
+      <span>ProofStamp</span>
       <nav aria-label="Footer navigation">
         <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">Learn about SHA-256</a>
         <a href="https://github.com/Proof-Stamp/emailapp">GitHub</a>
