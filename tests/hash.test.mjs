@@ -17,3 +17,9 @@ test('extracts a hash from a human-readable receipt', () => {
   const expected = 'B'.repeat(64)
   assert.equal(extractSha256(`SHA-256: ${expected}`), expected.toLowerCase())
 })
+
+test('different bytes produce different fingerprints', async () => {
+  const first = await sha256Bytes(new TextEncoder().encode('original'))
+  const second = await sha256Bytes(new TextEncoder().encode('changed'))
+  assert.notEqual(first, second)
+})
