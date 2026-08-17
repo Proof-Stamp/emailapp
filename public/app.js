@@ -1,4 +1,5 @@
-import { MAX_FILE_SIZE_BYTES, extractSha256, isSha256, sha256File } from './hash.js'
+import { MAX_FILE_SIZE_BYTES, extractSha256, sha256File } from './hash.js'
+import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEmail, parseReceiptJson, receiptToText } from './receipt.js'
 
 const $ = (selector) => document.querySelector(selector)
 const els = {
@@ -18,13 +19,6 @@ const els = {
 let selectedFile = null
 let currentHash = ''
 let currentReceipt = null
-
-function formatBytes(bytes) {
-  if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-  return `${(bytes / (1024 ** index)).toFixed(index ? 1 : 0)} ${units[index]}`
-}
 
 function showAlert(element, message) {
   element.textContent = message
@@ -100,32 +94,26 @@ async function calculateHash() {
   }
 }
 
-function validEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-}
-
 function createReceipt() {
   const description = els.description.value.trim()
   const primaryEmail = els.primaryEmail.value.trim()
   const secondEmail = els.secondEmail.value.trim()
   if (!description) return showAlert(els.createAlert, 'Add a description for this file.')
-  if (!validEmail(primaryEmail)) return showAlert(els.createAlert, 'Enter a valid email address.')
-  if (secondEmail && !validEmail(secondEmail)) return showAlert(els.createAlert, 'Enter a valid second email address or leave it blank.')
+  if (!isValidEmail(primaryEmail)) return showAlert(els.createAlert, 'Enter a valid email address.')
+  if (secondEmail && !isValidEmail(secondEmail)) return showAlert(els.createAlert, 'Enter a valid second email address or leave it blank.')
+  if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
+    return showAlert(els.createAlert, 'Use a different address for the second evidence email.')
+  }
   if (!currentHash || !selectedFile) return showAlert(els.createAlert, 'Select and fingerprint a file first.')
 
-  currentReceipt = {
-    schema: 'org.proofstamp.email-receipt',
-    version: '1.0',
-    hash_algorithm: 'SHA-256',
+  currentReceipt = buildReceipt({
     hash: currentHash,
     description,
-    file_name: els.includeFilename.checked ? selectedFile.name : null,
-    file_size_bytes: selectedFile.size,
-    media_type: selectedFile.type || 'application/octet-stream',
-    created_at_device: new Date().toISOString(),
-    verification_url: 'https://email.proofstamp.org/verify',
-    app_version: '0.1.0'
-  }
+    fileName: selectedFile.name,
+    includeFilename: els.includeFilename.checked,
+    fileSizeBytes: selectedFile.size,
+    mediaType: selectedFile.type
+  })
   currentReceipt._delivery = { primaryEmail, secondEmail }
   renderReceipt()
   showAlert(els.createAlert, '')
@@ -137,24 +125,6 @@ function createReceipt() {
 function publicReceipt() {
   const { _delivery, ...receipt } = currentReceipt
   return receipt
-}
-
-function receiptText() {
-  const receipt = publicReceipt()
-  const lines = [
-    'PROOFSTAMP EMAIL RECEIPT', '',
-    `Description: ${receipt.description}`,
-    ...(receipt.file_name ? [`Filename: ${receipt.file_name}`] : []),
-    `File size: ${formatBytes(receipt.file_size_bytes)} (${receipt.file_size_bytes} bytes)`,
-    `Media type: ${receipt.media_type}`,
-    `SHA-256: ${receipt.hash}`,
-    `Created on this device: ${receipt.created_at_device}`, '',
-    `Verify later: ${receipt.verification_url}`, '',
-    'Keep the original file. A matching SHA-256 later shows that its bytes are unchanged.', '',
-    'LIMITATION',
-    'This receipt does not prove when or where the file was created, who created it, whether it was changed before this receipt, or whether its contents are true. The email received time is a practical record, not an independent public timestamp.'
-  ]
-  return lines.join('\n')
 }
 
 function renderReceipt() {
@@ -178,10 +148,7 @@ function renderReceipt() {
 
 function openEmail() {
   const { primaryEmail, secondEmail } = currentReceipt._delivery
-  const subject = `ProofStamp receipt: ${currentReceipt.description.slice(0, 80)}`
-  const params = new URLSearchParams({ subject, body: receiptText() })
-  if (secondEmail) params.set('cc', secondEmail)
-  window.location.href = `mailto:${encodeURIComponent(primaryEmail)}?${params.toString()}`
+  window.location.href = createMailtoUrl({ receipt: publicReceipt(), primaryEmail, secondEmail })
 }
 
 async function copyText(text, button, label) {
@@ -208,8 +175,7 @@ async function loadReceiptFile(file) {
   showAlert(els.verifyAlert, '')
   if (!file) return
   try {
-    const parsed = JSON.parse(await file.text())
-    if (!isSha256(String(parsed.hash || ''))) throw new Error('invalid')
+    const parsed = parseReceiptJson(await file.text())
     els.expectedHash.value = parsed.hash.toLowerCase()
   } catch {
     showAlert(els.verifyAlert, 'That file is not a valid ProofStamp receipt JSON file.')
@@ -262,11 +228,10 @@ els.description.addEventListener('input', () => { els.descriptionCount.textConte
 els.copyHash.addEventListener('click', () => copyText(currentHash, els.copyHash, 'Copied'))
 els.receiptForm.addEventListener('submit', (event) => { event.preventDefault(); createReceipt() })
 els.openEmail.addEventListener('click', openEmail)
-els.copyReceipt.addEventListener('click', () => copyText(receiptText(), els.copyReceipt, 'Copied'))
+els.copyReceipt.addEventListener('click', () => copyText(receiptToText(publicReceipt()), els.copyReceipt, 'Copied'))
 els.downloadReceipt.addEventListener('click', downloadReceipt)
 els.createAnother.addEventListener('click', resetCreate)
 els.receiptFile.addEventListener('change', () => loadReceiptFile(els.receiptFile.files[0]))
 els.verifyButton.addEventListener('click', verify)
 
 if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify')
-
