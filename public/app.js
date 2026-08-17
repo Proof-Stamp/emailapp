@@ -204,9 +204,9 @@ async function verify() {
   showAlert(els.verifyAlert, '')
   els.verifyResult.hidden = true
   const expected = extractSha256(els.expectedHash.value)
-  const file = selectedVerifyFile
-  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint or the full ProofStamp email.')
+  const file = selectedVerifyFile || els.verifyFile.files[0]
   if (!file) return showAlert(els.verifyAlert, 'Choose the file you want to check.')
+  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint or the full ProofStamp email.')
   if (file.size > MAX_FILE_SIZE_BYTES) return showAlert(els.verifyAlert, 'Choose a file smaller than 50 MB.')
   els.verifyButton.disabled = true
   els.verifyButton.textContent = 'Checking the file…'
