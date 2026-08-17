@@ -5,10 +5,8 @@
     <rect width="64" height="64" rx="16" fill="#071b2c"/>
     <rect x="12" y="17" width="40" height="30" rx="5" fill="#f5f3ec"/>
     <path d="m15 21 17 13 17-13" fill="none" stroke="#071b2c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="47" cy="47" r="13" fill="#f5f3ec"/>
-    <image href="proofstamp-seal.svg" x="35" y="35" width="24" height="24"/>
+    <image href="proofstamp-seal.svg" x="22" y="24" width="20" height="20"/>
   </g>
   <text x="84" y="39" fill="#071b2c" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-weight="700" letter-spacing="-1">ProofStamp</text>
   <text x="86" y="60" fill="#087455" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2.2">EMAIL RECEIPT</text>
 </svg>
-
