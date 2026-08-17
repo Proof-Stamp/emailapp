@@ -1,6 +1,6 @@
-# ProofStamp Email Receipt
+# ProofStamp for Important Files
 
-A privacy-first web app that creates a SHA-256 fingerprint for a file in the browser and prepares an email receipt addressed to the user.
+A privacy-first web app that creates a SHA-256 fingerprint for a file in the browser and prepares a ProofStamp email addressed to the user.
 
 The file is never uploaded. The app has no account system, backend, analytics, or external service dependency.
 
@@ -8,11 +8,11 @@ The file is never uploaded. The app has no account system, backend, analytics, o
 
 - Hashes photos, documents, and other files locally with SHA-256
 - Requires a plain-language description
-- Addresses the receipt to the user's own email
+- Addresses the ProofStamp email to the user
 - Recommends an optional second mailbox, preferably at another provider
-- Opens the user's email app with a complete text receipt
-- Downloads a portable plain-text receipt
-- Verifies a preserved file against a fingerprint or full email receipt
+- Opens the user's email app with a complete ProofStamp
+- Downloads a portable plain-text ProofStamp
+- Verifies a preserved file against a fingerprint or full ProofStamp email
 - Explains the evidence value and important limitations
 
 ## Run locally
@@ -41,9 +41,9 @@ Point `email.proofstamp.org` to the resulting Pages project after deployment.
 
 All hashing happens through the browser Web Crypto API. Email addresses are used only to construct a local `mailto:` link. They are not stored or transmitted by this app.
 
-This receipt is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the receipt, or whether its contents are true.
+A ProofStamp is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the receipt, or whether its contents are true.
 
-See [docs/architecture.md](docs/architecture.md) for the receipt format and design decisions.
+See [docs/architecture.md](docs/architecture.md) for the ProofStamp format and design decisions.
 
 ## Brand assets
 
