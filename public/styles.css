@@ -50,7 +50,7 @@ a { color: inherit; }
 .brand-copy strong { letter-spacing: -.02em; }
 .brand-copy small { margin-top: .2rem; color: var(--muted); font-size: .72rem; }
 .privacy-link { color: var(--green-dark); font-size: .85rem; font-weight: 700; text-decoration: none; }
-.privacy-link::before { content: "œ"; margin-right: .5rem; font-size: .65rem; }
+.privacy-link::before { content: "‚óè"; margin-right: .5rem; font-size: .65rem; }
 
 .hero { max-width: 760px; margin: 4.6rem auto 2.6rem; padding: 0 2rem; text-align: center; }
 .eyebrow, .stage-kicker { color: var(--green-dark); text-transform: uppercase; letter-spacing: .13em; font-size: .73rem; font-weight: 800; }
