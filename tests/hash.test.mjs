@@ -32,7 +32,7 @@ test('recognizes a valid SHA-256 value', () => {
   assert.equal(isSha256('z'.repeat(64)), false)
 })
 
-test('extracts a hash from a human-readable receipt', () => {
+test('extracts a hash from a human-readable ProofStamp', () => {
   const expected = 'B'.repeat(64)
   assert.equal(extractSha256(`SHA-256: ${expected}`), expected.toLowerCase())
 })
@@ -43,7 +43,7 @@ test('different bytes produce different fingerprints', async () => {
   assert.notEqual(first, second)
 })
 
-test('creates a portable receipt without email addresses', () => {
+test('creates a portable ProofStamp without email addresses', () => {
   assert.equal(receipt.schema, RECEIPT_SCHEMA)
   assert.equal(receipt.hash, receiptHash)
   assert.equal(receipt.file_name, 'bedroom.jpg')
@@ -63,7 +63,7 @@ test('omits a private filename when requested', () => {
   assert.equal(privateReceipt.file_name, null)
 })
 
-test('builds a mailto URL with a second mailbox and complete receipt', () => {
+test('builds a mailto URL with a second mailbox and complete ProofStamp', () => {
   const url = new URL(createMailtoUrl({
     receipt,
     primaryEmail: 'person@example.com',
@@ -73,14 +73,14 @@ test('builds a mailto URL with a second mailbox and complete receipt', () => {
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
   assert.match(url.searchParams.get('body'), new RegExp(receiptHash))
-  assert.match(url.searchParams.get('body'), /practical record, not an independent public timestamp/)
+  assert.match(url.searchParams.get('body'), /email received time records when the ProofStamp reached your inbox/)
 })
 
-test('renders a readable text receipt', () => {
+test('renders a readable text ProofStamp', () => {
   const text = receiptToText(receipt)
   assert.match(text, /Description: Apartment condition before moving in/)
   assert.match(text, /File size: 2.0 KB \(2048 bytes\)/)
-  assert.match(text, /SHA-256: a{64}/)
+  assert.match(text, /File fingerprint \(SHA-256\): a{64}/)
 })
 
 test('accepts valid email addresses and rejects invalid ones', () => {
@@ -90,6 +90,6 @@ test('accepts valid email addresses and rejects invalid ones', () => {
 
 test('loads only valid ProofStamp JSON receipts', () => {
   assert.equal(parseReceiptJson(JSON.stringify(receipt)).hash, receiptHash)
-  assert.throws(() => parseReceiptJson(JSON.stringify({ hash: receiptHash })), /Invalid ProofStamp receipt/)
+  assert.throws(() => parseReceiptJson(JSON.stringify({ hash: receiptHash })), /Invalid ProofStamp file/)
   assert.throws(() => parseReceiptJson('{not json'))
 })
