@@ -66,9 +66,12 @@ export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
   if (secondEmail && !isValidEmail(secondEmail)) throw new TypeError('The second email is invalid.')
 
   const subject = `ProofStamp: ${receipt.description.slice(0, 80)}`
-  const params = new URLSearchParams({ subject, body: receiptToText(receipt) })
-  if (secondEmail) params.set('cc', secondEmail)
-  return `mailto:${encodeURIComponent(primaryEmail)}?${params.toString()}`
+  const params = [
+    `subject=${encodeURIComponent(subject)}`,
+    `body=${encodeURIComponent(receiptToText(receipt))}`
+  ]
+  if (secondEmail) params.push(`cc=${encodeURIComponent(secondEmail)}`)
+  return `mailto:${encodeURIComponent(primaryEmail)}?${params.join('&')}`
 }
 
 export function parseReceiptJson(text) {
