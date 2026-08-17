@@ -41,7 +41,7 @@ Point `email.proofstamp.org` to the resulting Pages project after deployment.
 
 All hashing happens through the browser Web Crypto API. Email addresses are used only to construct a local `mailto:` link. They are not stored or transmitted by this app.
 
-A ProofStamp is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the receipt, or whether its contents are true.
+A ProofStamp is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the ProofStamp, or whether its contents are true.
 
 See [docs/architecture.md](docs/architecture.md) for the ProofStamp format and design decisions.
 
