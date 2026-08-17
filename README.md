@@ -11,8 +11,8 @@ The file is never uploaded. The app has no account system, backend, analytics, o
 - Addresses the receipt to the user's own email
 - Recommends an optional second mailbox, preferably at another provider
 - Opens the user's email app with a complete text receipt
-- Exports a portable JSON receipt
-- Verifies a preserved file against an emailed hash or JSON receipt
+- Downloads a portable plain-text receipt
+- Verifies a preserved file against a fingerprint or full email receipt
 - Explains the evidence value and important limitations
 
 ## Run locally
@@ -43,7 +43,7 @@ All hashing happens through the browser Web Crypto API. Email addresses are used
 
 This receipt is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the receipt, or whether its contents are true.
 
-See [docs/architecture.md](docs/architecture.md) for the receipt schema and design decisions.
+See [docs/architecture.md](docs/architecture.md) for the receipt format and design decisions.
 
 ## Brand assets
 
