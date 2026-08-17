@@ -20,7 +20,7 @@ The deployed app is a set of static files. There is no application server.
 - No external processing is required.
 - No account, cookies, telemetry, or database are required.
 
-The external action begins only when the user opens their email client and sends the prepared message. At that point, the user's chosen email provider processes the receipt in the normal way.
+The external action begins only when the user opens their email client and sends the prepared message. At that point, the user's chosen email provider processes the ProofStamp email in the normal way.
 
 ## ProofStamp format
 
@@ -52,7 +52,7 @@ The filename is optional. Delivery addresses are deliberately excluded from copi
 
 A SHA-256 match shows that two sequences of bytes are identical with extremely high confidence. An email provider's received time can provide a practical third-party record that the ProofStamp existed in that mailbox by that time.
 
-It does not independently establish the original creation time, source, authorship, location, pre-receipt editing history, or truth of the file's contents. Users should retain the original file and the full email, including headers, when evidence quality matters.
+It does not independently establish the original creation time, source, authorship, location, pre-ProofStamp editing history, or truth of the file's contents. Users should retain the original file and the full email, including headers, when evidence quality matters.
 
 ## Initial deployment
 
