@@ -45,3 +45,8 @@ This receipt is practical supporting evidence, not a trusted timestamp. It does 
 
 See [docs/architecture.md](docs/architecture.md) for the receipt schema and design decisions.
 
+## Brand assets
+
+- `public/logo.svg` is the horizontal product logo.
+- `public/logo-mark.svg` is the standalone app mark.
+- `public/icon.svg` is the browser favicon.
