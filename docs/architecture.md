@@ -22,27 +22,31 @@ The deployed app is a set of static files. There is no application server.
 
 The external action begins only when the user opens their email client and sends the prepared message. At that point, the user's chosen email provider processes the receipt in the normal way.
 
-## Receipt schema
+## Receipt format
 
-JSON receipts use the following shape:
+Downloaded receipts are plain-text `.txt` files. The email body, copied receipt, and downloaded receipt use the same readable format:
 
-```json
-{
-  "schema": "org.proofstamp.email-receipt",
-  "version": "1.0",
-  "hash_algorithm": "SHA-256",
-  "hash": "64 hexadecimal characters",
-  "description": "User-provided context",
-  "file_name": "optional-name.jpg",
-  "file_size_bytes": 12345,
-  "media_type": "image/jpeg",
-  "created_at_device": "ISO 8601 informational device time",
-  "verification_url": "https://email.proofstamp.org/verify",
-  "app_version": "0.1.0"
-}
+```text
+PROOFSTAMP EMAIL RECEIPT
+
+This receipt stores a unique fingerprint for the file described below.
+
+Description: User-provided context
+Filename: optional-name.jpg
+File size: 12.1 KB (12345 bytes)
+Media type: image/jpeg
+File fingerprint (SHA-256): 64 hexadecimal characters
+Receipt created on this device: 2026-08-17T18:00:00.000Z
+
+Check this file later: https://email.proofstamp.org/verify
+
+Keep the original file. If its fingerprint matches this receipt later, the file has not changed.
+
+WHAT THIS RECEIPT DOES NOT PROVE
+It does not prove when or where the file was originally created, who made it, whether it was edited before the receipt, or whether its contents are true. The email received time is a practical record of when the receipt reached your inbox.
 ```
 
-Delivery addresses are deliberately excluded from exported receipts.
+The filename is optional. Delivery addresses are deliberately excluded from copied and downloaded receipts.
 
 ## Evidence model
 
