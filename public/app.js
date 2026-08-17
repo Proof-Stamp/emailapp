@@ -1,5 +1,5 @@
 import { MAX_FILE_SIZE_BYTES, extractSha256, sha256File } from './hash.js'
-import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEmail, parseReceiptJson, receiptToText } from './receipt.js'
+import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEmail, receiptToText } from './receipt.js'
 
 const $ = (selector) => document.querySelector(selector)
 const els = {
@@ -11,12 +11,15 @@ const els = {
   descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'),
   includeFilename: $('#include-filename'), receiptSummary: $('#receipt-summary'), providerCount: $('#receipt-provider-count'),
   openEmail: $('#open-email'), copyReceipt: $('#copy-receipt'), downloadReceipt: $('#download-receipt'), createAnother: $('#create-another'),
-  verifyAlert: $('#verify-alert'), receiptFile: $('#receipt-file'), expectedHash: $('#expected-hash'), verifyFile: $('#verify-file'),
+  verifyAlert: $('#verify-alert'), expectedHash: $('#expected-hash'), verifyFile: $('#verify-file'), verifyDropZone: $('#verify-drop-zone'),
+  verifySelectedFile: $('#verify-selected-file'), verifySelectedFileName: $('#verify-selected-file-name'),
+  verifySelectedFileMeta: $('#verify-selected-file-meta'), removeVerifyFile: $('#remove-verify-file'),
   verifyButton: $('#verify-button'), verifyResult: $('#verify-result'), verifyResultIcon: $('#verify-result-icon'),
   verifyResultTitle: $('#verify-result-title'), verifyResultCopy: $('#verify-result-copy'), actualHash: $('#actual-hash')
 }
 
 let selectedFile = null
+let selectedVerifyFile = null
 let currentHash = ''
 let currentReceipt = null
 
@@ -171,23 +174,35 @@ function downloadReceipt() {
   URL.revokeObjectURL(link.href)
 }
 
-async function loadReceiptFile(file) {
+function acceptVerifyFile(file) {
   showAlert(els.verifyAlert, '')
+  els.verifyResult.hidden = true
   if (!file) return
-  try {
-    const parsed = parseReceiptJson(await file.text())
-    els.expectedHash.value = parsed.hash.toLowerCase()
-  } catch {
-    showAlert(els.verifyAlert, 'That does not look like a ProofStamp JSON receipt.')
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    els.verifyFile.value = ''
+    showAlert(els.verifyAlert, 'Choose a file smaller than 50 MB.')
+    return
   }
+  selectedVerifyFile = file
+  els.verifySelectedFileName.textContent = file.name
+  els.verifySelectedFileMeta.textContent = `${formatBytes(file.size)}${file.type ? ` · ${file.type}` : ''}`
+  els.verifySelectedFile.hidden = false
+}
+
+function resetVerifyFile() {
+  selectedVerifyFile = null
+  els.verifyFile.value = ''
+  els.verifySelectedFile.hidden = true
+  els.verifyResult.hidden = true
+  showAlert(els.verifyAlert, '')
 }
 
 async function verify() {
   showAlert(els.verifyAlert, '')
   els.verifyResult.hidden = true
   const expected = extractSha256(els.expectedHash.value)
-  const file = els.verifyFile.files[0]
-  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint from your receipt, or open a receipt JSON file.')
+  const file = selectedVerifyFile
+  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint or the full ProofStamp email receipt.')
   if (!file) return showAlert(els.verifyAlert, 'Choose the file you want to check.')
   if (file.size > MAX_FILE_SIZE_BYTES) return showAlert(els.verifyAlert, 'Choose a file smaller than 50 MB.')
   els.verifyButton.disabled = true
@@ -231,7 +246,15 @@ els.openEmail.addEventListener('click', openEmail)
 els.copyReceipt.addEventListener('click', () => copyText(receiptToText(publicReceipt()), els.copyReceipt, 'Copied'))
 els.downloadReceipt.addEventListener('click', downloadReceipt)
 els.createAnother.addEventListener('click', resetCreate)
-els.receiptFile.addEventListener('change', () => loadReceiptFile(els.receiptFile.files[0]))
+els.verifyFile.addEventListener('change', () => acceptVerifyFile(els.verifyFile.files[0]))
+els.verifyDropZone.addEventListener('dragover', (event) => { event.preventDefault(); els.verifyDropZone.classList.add('dragging') })
+els.verifyDropZone.addEventListener('dragleave', () => els.verifyDropZone.classList.remove('dragging'))
+els.verifyDropZone.addEventListener('drop', (event) => {
+  event.preventDefault()
+  els.verifyDropZone.classList.remove('dragging')
+  acceptVerifyFile(event.dataTransfer.files[0])
+})
+els.removeVerifyFile.addEventListener('click', resetVerifyFile)
 els.verifyButton.addEventListener('click', verify)
 
 if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify')
