@@ -47,7 +47,7 @@ See [docs/architecture.md](docs/architecture.md) for the receipt schema and desi
 
 ## Brand assets
 
-- `public/logo.svg` is the horizontal product logo.
-- `public/logo-mark.svg` combines a minimal envelope with the official PS seal.
+- `public/email-receipt-logo.svg` is the current horizontal product logo.
+- `public/email-receipt-mark.svg` combines a minimal envelope with the official PS seal.
 - `public/proofstamp-seal.svg` preserves the official ProofStamp logo unchanged.
 - `public/icon.svg` is the browser favicon.
