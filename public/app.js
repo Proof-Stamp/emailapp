@@ -166,10 +166,10 @@ async function copyText(text, button, label) {
 }
 
 function downloadReceipt() {
-  const blob = new Blob([JSON.stringify(publicReceipt(), null, 2)], { type: 'application/json' })
+  const blob = new Blob([receiptToText(publicReceipt())], { type: 'text/plain;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `proofstamp-${currentHash.slice(0, 12)}.json`
+  link.download = `proofstamp-${currentHash.slice(0, 12)}.txt`
   link.click()
   URL.revokeObjectURL(link.href)
 }
