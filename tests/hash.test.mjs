@@ -64,11 +64,14 @@ test('omits a private filename when requested', () => {
 })
 
 test('builds a mailto URL with a second mailbox and complete ProofStamp', () => {
-  const url = new URL(createMailtoUrl({
+  const mailto = createMailtoUrl({
     receipt,
     primaryEmail: 'person@example.com',
     secondEmail: 'backup@example.net'
-  }))
+  })
+  assert.equal(mailto.includes('+'), false)
+  assert.equal(mailto.includes('%20'), true)
+  const url = new URL(mailto)
   assert.equal(url.protocol, 'mailto:')
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
