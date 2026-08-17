@@ -132,7 +132,10 @@ function publicReceipt() {
 
 function renderReceipt() {
   const receipt = publicReceipt()
+  const { primaryEmail, secondEmail } = currentReceipt._delivery
   const rows = [
+    ['Send to', primaryEmail],
+    ...(secondEmail ? [['Backup copy', secondEmail]] : []),
     ['Description', receipt.description],
     ...(receipt.file_name ? [['Filename', receipt.file_name]] : []),
     ['Size', formatBytes(receipt.file_size_bytes)],
