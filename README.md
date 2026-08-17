@@ -2,7 +2,7 @@
 
 A privacy-first web app that creates a SHA-256 fingerprint for a file in the browser and prepares an email receipt addressed to the user.
 
-The file is never uploaded. The app has no account system, backend, analytics, or blockchain dependency.
+The file is never uploaded. The app has no account system, backend, analytics, or external service dependency.
 
 ## What the MVP does
 
