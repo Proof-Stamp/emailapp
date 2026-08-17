@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071b2c" />
+    <meta
+      name="description"
+      content="Create a private SHA-256 receipt and email it to yourself. Your file never leaves your device."
+    />
+    <title>ProofStamp Email Receipt</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="ProofStamp Email Receipt home">
+        <span class="brand-mark" aria-hidden="true">PS</span>
+        <span class="brand-copy">
+          <strong>ProofStamp</strong>
+          <small>Email Receipt</small>
+        </span>
+      </a>
+      <a class="privacy-link" href="#privacy">File stays private</a>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="eyebrow">Simple evidence for important files</div>
+        <h1 id="hero-title">Email yourself a file fingerprint.</h1>
+        <p>
+          Create a SHA-256 receipt in your browser, add a description, and send it to your own inbox.
+          Your original file never leaves this device.
+        </p>
+        <ul class="trust-list" aria-label="Privacy and product benefits">
+          <li><span aria-hidden="true">✓</span> No account</li>
+          <li><span aria-hidden="true">✓</span> No upload</li>
+          <li><span aria-hidden="true">✓</span> No blockchain</li>
+        </ul>
+      </section>
+
+      <section class="tool-shell" aria-label="ProofStamp email receipt tool">
+        <div class="tabs" role="tablist" aria-label="Tool mode">
+          <button class="tab active" id="create-tab" role="tab" aria-selected="true" aria-controls="create-panel">
+            Create receipt
+          </button>
+          <button class="tab" id="verify-tab" role="tab" aria-selected="false" aria-controls="verify-panel">
+            Verify file
+          </button>
+        </div>
+
+        <section id="create-panel" class="panel" role="tabpanel" aria-labelledby="create-tab">
+          <ol class="steps" aria-label="Receipt creation progress">
+            <li class="step active" data-step="1"><span>1</span>Select file</li>
+            <li class="step" data-step="2"><span>2</span>Describe it</li>
+            <li class="step" data-step="3"><span>3</span>Email receipt</li>
+          </ol>
+
+          <div id="create-alert" class="alert" role="alert" hidden></div>
+
+          <section class="stage" id="file-stage" aria-labelledby="file-stage-title">
+            <div class="stage-heading">
+              <div>
+                <p class="stage-kicker">Step 1</p>
+                <h2 id="file-stage-title">Choose a photo or document</h2>
+              </div>
+              <span class="private-badge">Processed locally</span>
+            </div>
+
+            <label class="drop-zone" id="drop-zone">
+              <input id="file-input" type="file" />
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>Drop a file here or click to browse</strong>
+              <span>Photos, PDFs, documents, and archives up to 50 MB</span>
+            </label>
+
+            <div id="selected-file" class="selected-file" hidden>
+              <div class="file-icon" aria-hidden="true">FILE</div>
+              <div class="file-copy">
+                <strong id="selected-file-name"></strong>
+                <span id="selected-file-meta"></span>
+              </div>
+              <button id="remove-file" class="icon-button" type="button" aria-label="Remove selected file">×</button>
+            </div>
+
+            <button id="hash-file" class="primary-button full-button" type="button" hidden>
+              Calculate SHA-256
+            </button>
+            <p class="microcopy">Only your browser reads the file. Nothing is uploaded to ProofStamp.</p>
+          </section>
+
+          <section class="stage" id="details-stage" aria-labelledby="details-stage-title" hidden>
+            <div class="stage-heading">
+              <div>
+                <p class="stage-kicker">Step 2</p>
+                <h2 id="details-stage-title">Describe the evidence</h2>
+              </div>
+              <button id="start-over" class="text-button" type="button">Start over</button>
+            </div>
+
+            <div class="hash-card">
+              <div class="hash-heading">
+                <span>SHA-256 fingerprint</span>
+                <button id="copy-hash" class="small-button" type="button">Copy</button>
+              </div>
+              <code id="hash-value"></code>
+            </div>
+
+            <form id="receipt-form" novalidate>
+              <div class="field">
+                <label for="description">Description <span>Required</span></label>
+                <textarea
+                  id="description"
+                  maxlength="500"
+                  rows="3"
+                  placeholder="Example: Apartment condition before moving in, bedroom wall"
+                  required
+                ></textarea>
+                <div class="field-meta">
+                  <small>Write enough context to understand the file later.</small>
+                  <small id="description-count">0 / 500</small>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="primary-email">Your email <span>Required</span></label>
+                <input id="primary-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                <small>The receipt will be addressed to you. This address stays in your browser.</small>
+              </div>
+
+              <div class="field recommended-field">
+                <div class="recommended-heading">
+                  <label for="second-email">Second evidence email</label>
+                  <span class="recommended-label">Recommended</span>
+                </div>
+                <input id="second-email" type="email" placeholder="your-second-inbox@example.net" />
+                <small>Optional. Use a mailbox you control at a different email provider for extra redundancy.</small>
+              </div>
+
+              <label class="checkbox-row">
+                <input id="include-filename" type="checkbox" checked />
+                <span>
+                  Include the filename in the receipt
+                  <small>Turn this off if the filename contains private information.</small>
+                </span>
+              </label>
+
+              <button class="primary-button full-button" type="submit">Create email receipt</button>
+            </form>
+          </section>
+
+          <section class="stage success-stage" id="receipt-stage" aria-labelledby="receipt-stage-title" hidden>
+            <div class="success-mark" aria-hidden="true">✓</div>
+            <p class="stage-kicker">Step 3</p>
+            <h2 id="receipt-stage-title">Your receipt is ready</h2>
+            <p class="success-intro">Open your email app, review the message, and send it to yourself.</p>
+
+            <div class="receipt-preview">
+              <div class="receipt-preview-header">
+                <span>ProofStamp Email Receipt</span>
+                <span id="receipt-provider-count">1 inbox</span>
+              </div>
+              <dl id="receipt-summary"></dl>
+            </div>
+
+            <div class="action-grid">
+              <button id="open-email" class="primary-button" type="button">Open email</button>
+              <button id="copy-receipt" class="secondary-button" type="button">Copy receipt</button>
+              <button id="download-receipt" class="secondary-button" type="button">Download JSON</button>
+            </div>
+
+            <div class="keep-file-note">
+              <strong>Keep the original file.</strong>
+              <p>You do not need to email it. You will need the same file later to verify the fingerprint.</p>
+            </div>
+
+            <button id="create-another" class="text-button centered" type="button">Create another receipt</button>
+          </section>
+        </section>
+
+        <section id="verify-panel" class="panel" role="tabpanel" aria-labelledby="verify-tab" hidden>
+          <div class="verify-intro">
+            <p class="stage-kicker">Local verification</p>
+            <h2>Check a file against a receipt</h2>
+            <p>Select the preserved file and provide the SHA-256 from the email or JSON receipt.</p>
+          </div>
+
+          <div id="verify-alert" class="alert" role="alert" hidden></div>
+
+          <div class="verify-grid">
+            <div class="field">
+              <label for="receipt-file">Load receipt JSON</label>
+              <input id="receipt-file" class="file-control" type="file" accept="application/json,.json" />
+              <small>Or paste the fingerprint below.</small>
+            </div>
+
+            <div class="field">
+              <label for="expected-hash">Expected SHA-256</label>
+              <textarea id="expected-hash" rows="3" placeholder="Paste a hash or the full email receipt"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="verify-file">File to verify</label>
+              <input id="verify-file" class="file-control" type="file" />
+              <small>This file also stays on your device.</small>
+            </div>
+          </div>
+
+          <button id="verify-button" class="primary-button full-button" type="button">Verify file</button>
+
+          <div id="verify-result" class="verify-result" aria-live="polite" hidden>
+            <div id="verify-result-icon" class="verify-result-icon" aria-hidden="true"></div>
+            <div>
+              <h3 id="verify-result-title"></h3>
+              <p id="verify-result-copy"></p>
+              <code id="actual-hash"></code>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="explanation" id="privacy" aria-labelledby="explanation-title">
+        <div>
+          <p class="stage-kicker">What this gives you</p>
+          <h2 id="explanation-title">A practical email record, not a claim of truth.</h2>
+        </div>
+        <div class="explanation-grid">
+          <article>
+            <span class="explanation-number">01</span>
+            <h3>Fingerprint locally</h3>
+            <p>SHA-256 identifies the exact file bytes without uploading the file.</p>
+          </article>
+          <article>
+            <span class="explanation-number">02</span>
+            <h3>Store it in your inbox</h3>
+            <p>Your email provider records when it received the hash receipt.</p>
+          </article>
+          <article>
+            <span class="explanation-number">03</span>
+            <h3>Verify it later</h3>
+            <p>A matching hash shows the preserved file has exactly the same bytes.</p>
+          </article>
+        </div>
+        <div class="limitation">
+          <strong>Important limitation</strong>
+          <p>
+            This receipt does not prove when or where a photo was taken, who created the file, whether it was edited
+            before the receipt was made, or whether its contents are true. The email received time is a practical
+            record, not an independent public timestamp.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>ProofStamp Email Receipt</span>
+      <nav aria-label="Footer navigation">
+        <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">Learn about SHA-256</a>
+        <a href="https://github.com/Proof-Stamp/emailapp">GitHub</a>
+        <a href="https://proofstamp.org/">ProofStamp.org</a>
+      </nav>
+    </footer>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
