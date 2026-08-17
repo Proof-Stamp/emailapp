@@ -30,7 +30,6 @@
           <small>Email Receipt</small>
         </span>
       </a>
-      <a class="privacy-link" href="#privacy">Your file stays private</a>
     </header>
 
     <main id="main">
@@ -38,7 +37,7 @@
         <div class="eyebrow">A timestamped receipt for important files</div>
         <h1 id="hero-title">Give an important file a date you can point to.</h1>
         <p>
-          Choose a photo or document. ProofStamp creates a unique fingerprint and prepares an email receipt
+          Choose one file. ProofStamp creates a unique fingerprint and prepares an email receipt
           you can send to yourself. Your file stays on your device.
         </p>
         <ul class="trust-list" aria-label="Privacy and product benefits">
@@ -71,7 +70,7 @@
             <div class="stage-heading">
               <div>
                 <p class="stage-kicker">Step 1</p>
-                <h2 id="file-stage-title">Choose the photo or document</h2>
+                <h2 id="file-stage-title">Choose one file</h2>
               </div>
               <span class="private-badge">Processed locally</span>
             </div>
@@ -80,7 +79,7 @@
               <input id="file-input" type="file" />
               <span class="upload-icon" aria-hidden="true">↑</span>
               <strong>Drop your file here or choose one</strong>
-              <span>Photos, PDFs, documents, and archives up to 50 MB</span>
+              <span>One file up to 50 MB</span>
             </label>
 
             <div id="selected-file" class="selected-file" hidden>
@@ -191,28 +190,31 @@
           <div class="verify-intro">
             <p class="stage-kicker">Check a saved file</p>
             <h2>Does this file match the receipt?</h2>
-            <p>Choose the saved file and add the fingerprint from your email or JSON receipt. ProofStamp checks everything in your browser.</p>
+            <p>Choose one file and paste the fingerprint or email receipt. ProofStamp checks everything in your browser.</p>
           </div>
 
           <div id="verify-alert" class="alert" role="alert" hidden></div>
 
-          <div class="verify-grid">
-            <div class="field">
-              <label for="receipt-file">Open receipt JSON</label>
-              <input id="receipt-file" class="file-control" type="file" accept="application/json,.json" />
-              <small>Or paste the fingerprint below.</small>
-            </div>
+          <label class="drop-zone" id="verify-drop-zone">
+            <input id="verify-file" type="file" />
+            <span class="upload-icon" aria-hidden="true">↑</span>
+            <strong>Drop your saved file here or choose it</strong>
+            <span>One file up to 50 MB</span>
+          </label>
 
-            <div class="field">
-              <label for="expected-hash">Fingerprint from the receipt</label>
-              <textarea id="expected-hash" rows="3" placeholder="Paste the fingerprint or the full email receipt"></textarea>
+          <div id="verify-selected-file" class="selected-file" hidden>
+            <div class="file-icon" aria-hidden="true">FILE</div>
+            <div class="file-copy">
+              <strong id="verify-selected-file-name"></strong>
+              <span id="verify-selected-file-meta"></span>
             </div>
+            <button id="remove-verify-file" class="icon-button" type="button" aria-label="Remove selected file">×</button>
+          </div>
 
-            <div class="field">
-              <label for="verify-file">File you want to check</label>
-              <input id="verify-file" class="file-control" type="file" />
-              <small>This file stays on your device too.</small>
-            </div>
+          <div class="field verify-fingerprint-field">
+            <label for="expected-hash">Fingerprint or email receipt</label>
+            <textarea id="expected-hash" rows="4" placeholder="Paste the fingerprint or full email receipt"></textarea>
+            <small>Look for the 64-character file fingerprint in your ProofStamp email.</small>
           </div>
 
           <button id="verify-button" class="primary-button full-button" type="button">Check file</button>
