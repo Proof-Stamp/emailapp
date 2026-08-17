@@ -17,7 +17,7 @@ The deployed app is a set of static files. There is no application server.
 - Source files stay on the user's device.
 - Email addresses stay in browser memory.
 - Receipt generation uses a `mailto:` URL.
-- No blockchain transaction is created.
+- No external processing is required.
 - No account, cookies, telemetry, or database are required.
 
 The external action begins only when the user opens their email client and sends the prepared message. At that point, the user's chosen email provider processes the receipt in the normal way.
