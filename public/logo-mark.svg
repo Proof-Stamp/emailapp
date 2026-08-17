@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">ProofStamp Email Receipt mark</title>
+  <desc id="desc">A white envelope on a navy seal with a green verification stamp</desc>
+  <rect width="64" height="64" rx="16" fill="#071b2c"/>
+  <path d="M13 20.5A4.5 4.5 0 0 1 17.5 16h29a4.5 4.5 0 0 1 4.5 4.5v22a4.5 4.5 0 0 1-4.5 4.5h-29a4.5 4.5 0 0 1-4.5-4.5v-22Z" fill="#f5f3ec"/>
+  <path d="m16 20 16 13 16-13" fill="none" stroke="#071b2c" stroke-width="3.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m16 43 11.5-10M48 43 36.5 33" fill="none" stroke="#9fb0ba" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="47" cy="46" r="11" fill="#0f9f74" stroke="#071b2c" stroke-width="3"/>
+  <path d="m42 46 3.2 3.2L52 42.4" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
