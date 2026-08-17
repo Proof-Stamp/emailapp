@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { extractSha256, isSha256, sha256Bytes } from '../public/hash.js'
+import { createReceipt } from '../public/receipt.js'
 
 test('hashes exact bytes with SHA-256', async () => {
   const hash = await sha256Bytes(new TextEncoder().encode('abc'))
@@ -22,4 +23,17 @@ test('different bytes produce different fingerprints', async () => {
   const first = await sha256Bytes(new TextEncoder().encode('original'))
   const second = await sha256Bytes(new TextEncoder().encode('changed'))
   assert.notEqual(first, second)
+})
+
+test('creates a portable receipt', () => {
+  const receipt = createReceipt({
+    hash: 'a'.repeat(64),
+    description: 'Apartment condition',
+    fileName: 'bedroom.jpg',
+    includeFilename: true,
+    fileSizeBytes: 2048,
+    mediaType: 'image/jpeg'
+  })
+  assert.equal(receipt.file_name, 'bedroom.jpg')
+  assert.equal('primaryEmail' in receipt, false)
 })
