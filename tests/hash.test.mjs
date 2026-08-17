@@ -73,14 +73,14 @@ test('builds a mailto URL with a second mailbox and complete receipt', () => {
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
   assert.match(url.searchParams.get('body'), new RegExp(receiptHash))
-  assert.match(url.searchParams.get('body'), /practical record, not an independent public timestamp/)
+  assert.match(url.searchParams.get('body'), /practical record of when the receipt reached your inbox/)
 })
 
 test('renders a readable text receipt', () => {
   const text = receiptToText(receipt)
   assert.match(text, /Description: Apartment condition before moving in/)
   assert.match(text, /File size: 2.0 KB \(2048 bytes\)/)
-  assert.match(text, /SHA-256: a{64}/)
+  assert.match(text, /File fingerprint \(SHA-256\): a{64}/)
 })
 
 test('accepts valid email addresses and rejects invalid ones', () => {
