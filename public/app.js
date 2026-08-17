@@ -134,8 +134,8 @@ function renderReceipt() {
   const receipt = publicReceipt()
   const { primaryEmail, secondEmail } = currentReceipt._delivery
   const rows = [
-    ['Send to', primaryEmail],
-    ...(secondEmail ? [['Backup copy', secondEmail]] : []),
+    ['Primary email', primaryEmail],
+    ...(secondEmail ? [['Backup email', secondEmail]] : []),
     ['Description', receipt.description],
     ...(receipt.file_name ? [['Filename', receipt.file_name]] : []),
     ['Size', formatBytes(receipt.file_size_bytes)],
@@ -149,12 +149,12 @@ function renderReceipt() {
     dd.textContent = value
     return [dt, dd]
   }))
-  els.providerCount.textContent = currentReceipt._delivery.secondEmail ? '2 inboxes' : '1 inbox'
+  els.providerCount.textContent = secondEmail ? '2 email addresses' : '1 email address'
 }
 
 function openEmail() {
   const { primaryEmail, secondEmail } = currentReceipt._delivery
-  window.location.href = createMailtoUrl({ receipt: publicReceipt(), primaryEmail, secondEmail })
+  window.open(createMailtoUrl({ receipt: publicReceipt(), primaryEmail, secondEmail }), '_blank', 'noopener')
 }
 
 async function copyText(text, button, label) {
