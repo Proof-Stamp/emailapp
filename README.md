@@ -50,4 +50,9 @@ See [docs/architecture.md](docs/architecture.md) for the receipt schema and desi
 - `public/email-receipt-logo.svg` is the current horizontal product logo.
 - `public/proofstamp-email-mark-vector.svg` combines a minimal envelope with the official PS seal using vector paths only.
 - `public/proofstamp-seal.svg` preserves the official ProofStamp logo unchanged.
-- `public/icon.svg` is the browser favicon.
+
+Legacy duplicate asset names were removed to keep one canonical file for each logo variant.
+
+## Automated checks
+
+`npm run check` runs the unit tests and production build. GitHub Actions runs the same command for every pull request and every push to `main`.
