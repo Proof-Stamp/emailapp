@@ -40,9 +40,9 @@ test.describe('email app return flow', () => {
 
     await page.locator('#return-verify').click()
     await expect(page.locator('#verify-panel')).toBeVisible()
-    await expect(page.locator('#expected-hash')).toContainText('PROOFSTAMP')
-    await expect(page.locator('#expected-hash')).toContainText('Apartment condition before moving out')
-    await expect(page.locator('#expected-hash')).toContainText('return-photo.jpg')
+    await expect(page.locator('#expected-hash')).toHaveValue(/PROOFSTAMP/)
+    await expect(page.locator('#expected-hash')).toHaveValue(/Apartment condition before moving out/)
+    await expect(page.locator('#expected-hash')).toHaveValue(/return-photo\.jpg/)
   })
 
   test('does not double-count an email app open after reload', async ({ page }) => {
