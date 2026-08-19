@@ -66,7 +66,6 @@ export function createReceipt({
   fileSizeBytes,
   mediaType,
   files,
-  setHash = '',
   createdAtDevice = new Date().toISOString()
 }) {
   if (!description.trim()) throw new TypeError('A description is required.')
@@ -80,10 +79,6 @@ export function createReceipt({
   }
 
   const normalizedFiles = sourceFiles.map((file) => normalizeFile(file, includeFilename))
-  const normalizedSetHash = normalizedFiles.length > 1 ? String(setHash).toLowerCase() : ''
-  if (normalizedFiles.length > 1 && !isSha256(normalizedSetHash)) {
-    throw new TypeError('A valid set fingerprint is required for multiple files.')
-  }
 
   return {
     schema: RECEIPT_SCHEMA,
@@ -91,7 +86,6 @@ export function createReceipt({
     hash_algorithm: 'SHA-256',
     description: description.trim(),
     files: normalizedFiles,
-    set_hash: normalizedSetHash || null,
     created_at_device: createdAtDevice,
     verification_url: VERIFICATION_URL,
     app_version: APP_VERSION
@@ -120,10 +114,6 @@ export function receiptToText(receipt) {
     lines.push(`SHA-256: ${file.hash}`)
     if (index < files.length - 1) lines.push('')
   })
-
-  if (plural && isSha256(String(receipt.set_hash || ''))) {
-    lines.push('', 'Set fingerprint (SHA-256):', receipt.set_hash)
-  }
 
   lines.push(
     `Created at: ${formatReceiptDate(receipt.created_at_device)}`, '',
@@ -169,14 +159,7 @@ export function parseReceiptJson(text) {
   if (Array.isArray(parsed.files) && parsed.files.length) {
     if (parsed.files.length > MAX_FILES_PER_PROOFSTAMP) throw new TypeError('Invalid ProofStamp file.')
     const files = parsed.files.map((file) => normalizeFile(file, true))
-    if (files.length > 1 && !isSha256(String(parsed.set_hash || ''))) {
-      throw new TypeError('Invalid ProofStamp file.')
-    }
-    return {
-      ...parsed,
-      files,
-      set_hash: parsed.set_hash ? String(parsed.set_hash).toLowerCase() : null
-    }
+    return { ...parsed, files }
   }
 
   if (!isSha256(String(parsed?.hash || ''))) throw new TypeError('Invalid ProofStamp file.')
