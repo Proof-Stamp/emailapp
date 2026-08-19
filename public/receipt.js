@@ -102,18 +102,16 @@ export function receiptToText(receipt) {
   const plural = files.length > 1
   const lines = [
     'PROOFSTAMP', '',
-    `I sent you a ProofStamp for ${receipt.description}.`, '',
-    plural
-      ? `${files.length} files were fingerprinted. Use this to check whether they match later.`
-      : 'Use it to check later whether a file exactly matches the one I fingerprinted.', '',
+    `Here is a ProofStamp for ${receipt.description}.`, '',
     plural ? 'VERIFY THE FILES' : 'VERIFY THE FILE',
     receipt.verification_url || VERIFICATION_URL, '',
-    'DETAILS'
+    plural ? 'FILES' : 'FILE'
   ]
 
   files.forEach((file, index) => {
     const label = file.file_name || `File ${index + 1}`
-    lines.push(`${index + 1}. ${label} · ${formatBytes(file.file_size_bytes)}`)
+    const prefix = plural ? `${index + 1}. ` : ''
+    lines.push(`${prefix}${label} · ${formatBytes(file.file_size_bytes)}`)
     lines.push(`SHA-256: ${file.hash}`)
     if (index < files.length - 1) lines.push('')
   })
@@ -121,14 +119,11 @@ export function receiptToText(receipt) {
   lines.push(
     `Created at: ${formatReceiptDate(receipt.created_at_device)}`, '',
     plural
-      ? 'Keep the original files. Matching fingerprints later mean the files have not changed.'
-      : 'Keep the original file. A matching fingerprint later means the file has not changed.', '',
-    'ABOUT THIS PROOFSTAMP',
-    plural
-      ? 'Matching fingerprints confirm the files are unchanged. The email received time shows when this ProofStamp reached the inbox.'
-      : 'A matching fingerprint confirms the file is unchanged. The email received time shows when this ProofStamp reached the inbox.', '',
+      ? 'Keep the original files. If their fingerprints match this ProofStamp later, the files have not changed.'
+      : 'Keep the original file. If its fingerprint matches this ProofStamp later, the file has not changed.', '',
+    'The email received time shows when this ProofStamp reached the inbox.', '',
     `Free. Private. No registration. Your ${plural ? 'files stay' : 'file stays'} on your device.`, '',
-    `ProofStamp your own ${plural ? 'files' : 'file'} →`,
+    'Create your own ProofStamp →',
     CREATE_URL
   )
 
