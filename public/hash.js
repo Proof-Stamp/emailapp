@@ -16,18 +16,6 @@ export async function sha256File(file) {
   return sha256Bytes(await file.arrayBuffer())
 }
 
-export async function sha256Text(value) {
-  return sha256Bytes(new TextEncoder().encode(value))
-}
-
-export async function setFingerprint(hashes) {
-  if (!Array.isArray(hashes) || !hashes.length || hashes.some((hash) => !isSha256(String(hash)))) {
-    throw new TypeError('One or more valid SHA-256 fingerprints are required.')
-  }
-  const canonical = hashes.map((hash) => hash.toLowerCase()).sort().join('\n')
-  return sha256Text(canonical)
-}
-
 export function isSha256(value) {
   return /^[a-f0-9]{64}$/i.test(String(value).trim())
 }
@@ -68,17 +56,4 @@ export function extractProofstampFileHashes(value) {
   }
 
   return matches.length ? matches : extractSha256s(text)
-}
-
-export function extractSetSha256(value) {
-  const text = String(value).trim()
-  if (!text) return ''
-
-  try {
-    const parsed = JSON.parse(text)
-    return isSha256(String(parsed?.set_hash || '')) ? String(parsed.set_hash).toLowerCase() : ''
-  } catch {
-    const match = text.match(/Set fingerprint(?: \(SHA-256\))?:\s*([a-f0-9]{64})/i)
-    return match ? match[1].toLowerCase() : ''
-  }
 }
