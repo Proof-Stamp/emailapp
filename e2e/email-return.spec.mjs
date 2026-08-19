@@ -54,6 +54,35 @@ test.describe('email app return flow', () => {
     await expect(page.locator('#expected-hash')).toHaveValue(/return-photo\.jpg/)
   })
 
+  test('desktop opens email separately and keeps feedback in the ProofStamp tab', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__proofstampOpenCalls = []
+      window.open = (url, target, features) => {
+        window.__proofstampOpenCalls.push({ url, target, features })
+        return { closed: false }
+      }
+    })
+
+    await createProofstamp(page)
+    const proofstampUrl = page.url()
+
+    await page.locator('#open-email').click()
+
+    await expect(page).toHaveURL(proofstampUrl)
+    const openCalls = await page.evaluate(() => window.__proofstampOpenCalls)
+    expect(openCalls).toHaveLength(1)
+    expect(openCalls[0].url).toMatch(/^mailto:/)
+    expect(openCalls[0].target).toBe('_blank')
+    expect(openCalls[0].features).toContain('noopener')
+
+    await expect(page.locator('#email-status')).toContainText('Email opened separately')
+    await expect(page.locator('#email-return')).toBeVisible()
+    await expect(page.locator('#email-return > strong')).toHaveText('After sending the email')
+    await expect(page.locator('#email-return > p')).toContainText('Come back to this tab')
+    await expect(page.locator('.email-feedback-actions')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('proofstamp.emailOpened.v1'))).toBe('1')
+  })
+
   test('records one anonymous Not quite response without leaving stuck buttons', async ({ page }) => {
     const metrics = []
     await createProofstamp(page, metrics)
