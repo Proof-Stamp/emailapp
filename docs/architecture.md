@@ -4,12 +4,11 @@
 
 1. The user selects 1–10 files.
 2. The browser calculates a SHA-256 fingerprint for each file with Web Crypto.
-3. If several files are selected, the browser also creates one set fingerprint from the individual fingerprints.
-4. The user adds one required description and a destination email.
-5. The user can add an optional CC address.
-6. The app creates one ProofStamp and opens the user's default email client.
-7. The user sends the ProofStamp email and preserves the original files.
-8. The verification view can check one file, several files, or the complete set against the fingerprints stored in the ProofStamp.
+3. The user adds one required description and a destination email.
+4. The user can add an optional CC address.
+5. The app creates one ProofStamp and opens the user's default email client.
+6. The user sends the ProofStamp email and preserves the original files.
+7. The verification view can check one file, several files, or all files against the fingerprints stored in the ProofStamp.
 
 ## Privacy boundary
 
@@ -26,18 +25,7 @@ The external action begins only when the user opens their email client and sends
 
 ## File fingerprints
 
-Every selected file gets its own SHA-256 fingerprint. This is the primary verification primitive because it lets a recipient check any individual file later.
-
-For a multi-file ProofStamp, the app also creates a set fingerprint:
-
-1. Normalize every individual SHA-256 fingerprint to lowercase.
-2. Sort the fingerprints lexicographically.
-3. Join them with newline characters.
-4. SHA-256 hash that canonical string.
-
-Sorting makes the set fingerprint independent of the order in which the files were selected. Duplicate file fingerprints remain duplicated, so the set fingerprint also commits to their count.
-
-The set fingerprint does not replace the individual file fingerprints. It provides an additional way to check that the complete collection is the same collection recorded in the ProofStamp.
+Every selected file gets its own SHA-256 fingerprint. This lets a recipient verify any individual file later and keeps the format simple: a multi-file ProofStamp is just one description plus a list of file fingerprints.
 
 ## ProofStamp format
 
@@ -63,8 +51,6 @@ SHA-256: <64 hexadecimal characters>
 3. bedroom.jpg · 1.5 MB
 SHA-256: <64 hexadecimal characters>
 
-Set fingerprint (SHA-256):
-<64 hexadecimal characters>
 Created at: August 19, 2026 at 4:24 PM UTC
 
 Keep the original files. Matching fingerprints later mean the files have not changed.
@@ -82,11 +68,11 @@ Filenames are optional. Delivery addresses are deliberately excluded from copied
 
 ## Verification model
 
-When a user pastes a ProofStamp email, the verifier extracts the individual file fingerprints separately from the optional set fingerprint.
+When a user pastes a ProofStamp email, the verifier extracts the individual file fingerprints.
 
 - One selected file can be checked against any file fingerprint in the ProofStamp.
 - Several selected files are checked as a multiset, so duplicate fingerprints cannot be reused more times than they appear in the ProofStamp.
-- When the number of selected files equals the number recorded in the ProofStamp, the app also checks the set fingerprint when one is present.
+- If the number of selected files equals the number of fingerprints in the ProofStamp and they all match, the selected files match the complete recorded collection.
 - Legacy single-file ProofStamps remain valid and can still be verified.
 
 A SHA-256 match shows that two sequences of bytes are identical with extremely high confidence. An email provider's received time can provide a practical third-party record that the ProofStamp existed in that mailbox by that time.
