@@ -94,12 +94,12 @@ test.describe('mobile validation and stage navigation', () => {
     await expectFocused(page, stepOneTitle)
   })
 
-  test('rejects too many files without losing the previous valid selection', async ({ page }) => {
+  test('rejects more than five files without losing the previous valid selection', async ({ page }) => {
     await page.goto('/')
     await page.locator('#file-input').setInputFiles(photo)
     await expect(page.locator('#selected-files')).toContainText('photo.jpg')
 
-    const tooMany = Array.from({ length: 11 }, (_, index) => ({
+    const tooMany = Array.from({ length: 6 }, (_, index) => ({
       name: `photo-${index + 1}.jpg`,
       mimeType: 'image/jpeg',
       buffer: Buffer.from(`photo-${index + 1}`)
@@ -107,7 +107,7 @@ test.describe('mobile validation and stage navigation', () => {
     await page.locator('#file-input').setInputFiles(tooMany)
 
     const alert = page.locator('#create-alert')
-    await expect(alert).toContainText('Choose up to 10 files at a time.')
+    await expect(alert).toContainText('Choose up to 5 files at a time.')
     await expect(alert).toContainText('Your previous 1 file is still selected.')
     await expect(page.locator('#selected-files')).toContainText('photo.jpg')
     await expectInViewport(alert)
@@ -162,5 +162,44 @@ test.describe('mobile validation and stage navigation', () => {
     const toast = page.locator('[data-proofstamp-toast]')
     await expect(toast).toContainText('Copying was blocked')
     await expectInViewport(toast)
+  })
+
+  test('usage metrics contain only aggregate event data', async ({ page }) => {
+    const metrics = []
+    await page.route('**/api/metrics', async (route) => {
+      metrics.push(JSON.parse(route.request().postData() || '{}'))
+      await route.fulfill({ status: 204, body: '' })
+    })
+
+    await chooseAndHash(page)
+    await completeRequiredFields(page)
+    await page.locator('button[type="submit"]').click()
+
+    await expect.poll(() => metrics.some((metric) => metric.event === 'proof_created')).toBe(true)
+    expect(metrics.find((metric) => metric.event === 'proof_created')).toEqual({ event: 'proof_created', fileCount: 1 })
+
+    await page.evaluate(async () => {
+      const { createMailtoUrl } = await import('/receipt.js')
+      const receipt = {
+        description: 'Private description',
+        files: [{
+          hash: 'a'.repeat(64),
+          file_name: 'private-photo.jpg',
+          file_size_bytes: 123,
+          media_type: 'image/jpeg'
+        }],
+        created_at_device: '2026-08-19T18:00:00.000Z',
+        verification_url: 'https://email.proofstamp.org/verify'
+      }
+      createMailtoUrl({ receipt, primaryEmail: 'private@example.com' })
+      createMailtoUrl({ receipt, primaryEmail: 'private@example.com' })
+    })
+
+    await expect.poll(() => metrics.filter((metric) => metric.event === 'email_opened').length).toBe(1)
+    const serialized = JSON.stringify(metrics)
+    expect(serialized).not.toContain('private-photo.jpg')
+    expect(serialized).not.toContain('private@example.com')
+    expect(serialized).not.toContain('Private description')
+    expect(serialized).not.toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
   })
 })
