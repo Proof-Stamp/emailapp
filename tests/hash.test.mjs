@@ -85,6 +85,7 @@ test('builds a standards-friendly mailto URL with a second mailbox and complete 
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
   assert.match(url.searchParams.get('body'), new RegExp(receiptHash))
+  assert.match(url.searchParams.get('body'), /I sent you a ProofStamp/)
   assert.match(url.searchParams.get('body'), /VERIFY A FILE/)
   assert.match(url.searchParams.get('body'), /Need to create your own\?/)
   assert.match(url.searchParams.get('body'), /ProofStamp a file: https:\/\/email\.proofstamp\.org\//)
@@ -93,7 +94,8 @@ test('builds a standards-friendly mailto URL with a second mailbox and complete 
 
 test('renders a readable, recipient-friendly text ProofStamp', () => {
   const text = receiptToText(receipt)
-  assert.match(text, /I created a ProofStamp for: Apartment condition before moving in/)
+  assert.match(text, /I sent you a ProofStamp/)
+  assert.match(text, /For: Apartment condition before moving in/)
   assert.match(text, /VERIFY A FILE/)
   assert.match(text, /File size: 2.0 KB \(2048 bytes\)/)
   assert.match(text, /SHA-256 fingerprint:\na{64}/)
