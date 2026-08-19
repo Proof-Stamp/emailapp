@@ -44,6 +44,15 @@ function readState() {
   }
 }
 
+function usesMobileMailHandoff() {
+  const mobileHint = navigator.userAgentData?.mobile
+  if (typeof mobileHint === 'boolean') return mobileHint
+
+  const userAgent = navigator.userAgent || ''
+  const iPadDesktopMode = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  return iPadDesktopMode || /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)
+}
+
 function parseBytes(text) {
   const match = String(text || '').trim().match(/^([\d.]+)\s*(B|KB|MB|GB)/i)
   if (!match) return 0
@@ -152,14 +161,24 @@ function ensureReturnUi() {
   })
 }
 
-function showEmailOpenedState({ showReturn = false } = {}) {
+function showEmailOpenedState({ showReturn = false, desktop = false } = {}) {
   ensureReturnUi()
   if (openEmailButton) openEmailButton.textContent = 'Open email app again'
   if (emailStatus) {
-    emailStatus.textContent = 'Email app opened. After sending, come back here. Your ProofStamp will still be waiting.'
+    emailStatus.textContent = desktop
+      ? 'Email opened separately. After sending, come back to this ProofStamp tab.'
+      : 'Email app opened. After sending, come back here. Your ProofStamp will still be waiting.'
     emailStatus.hidden = false
   }
-  if (returnPanel && showReturn) returnPanel.hidden = false
+  if (returnPanel && showReturn) {
+    const heading = returnPanel.querySelector(':scope > strong')
+    const copy = returnPanel.querySelector(':scope > p')
+    if (heading) heading.textContent = desktop ? 'After sending the email' : 'Back from your email app?'
+    if (copy) copy.textContent = desktop
+      ? 'Come back to this tab. Your ProofStamp is still here.'
+      : 'Your ProofStamp is still here.'
+    returnPanel.hidden = false
+  }
 }
 
 function restoreState() {
@@ -190,14 +209,25 @@ function restoreState() {
   return true
 }
 
-function openRestoredEmail() {
-  if (!savedState) return
+function mailtoForSavedState() {
+  if (!savedState) return null
   const { receipt, delivery } = savedState
-  location.href = createMailtoUrl({
+  return createMailtoUrl({
     receipt,
     primaryEmail: delivery.primaryEmail,
     secondEmail: delivery.secondEmail
   })
+}
+
+function openRestoredEmail() {
+  const mailto = mailtoForSavedState()
+  if (mailto) location.href = mailto
+}
+
+function openDesktopEmail() {
+  const mailto = mailtoForSavedState()
+  if (!mailto) return
+  window.open(mailto, '_blank', 'noopener,noreferrer')
 }
 
 function copyRestoredReceipt() {
@@ -244,6 +274,15 @@ if (receiptStage) {
     if (target.id === 'open-email') {
       if (!savedState) captureState()
       safeSessionSet(EMAIL_OPENED_KEY, '1')
+
+      if (!usesMobileMailHandoff() && savedState) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        showEmailOpenedState({ showReturn: true, desktop: true })
+        openDesktopEmail()
+        return
+      }
+
       showEmailOpenedState()
       if (restored) {
         event.preventDefault()

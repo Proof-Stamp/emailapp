@@ -1,7 +1,7 @@
 import { trackFeedback } from './metrics.js'
 
 const RECEIPT_KEY = 'proofstamp.currentReceipt.v1'
-const FEEDBACK_KEY = 'proofstamp.feedback.v1'
+const FEEDBACK_KEY_PREFIX = 'proofstamp.feedback.v2'
 const FEEDBACK_EMAIL = 'info@proofstamp.org'
 
 function safeSessionGet(key) {
@@ -22,6 +22,13 @@ function readReceipt() {
   }
 }
 
+function feedbackStorageKey(receipt) {
+  const firstHash = receipt?.files?.[0]?.hash || receipt?.hash || ''
+  const createdAt = receipt?.created_at_device || ''
+  if (!firstHash || !createdAt) return null
+  return `${FEEDBACK_KEY_PREFIX}:${createdAt}:${firstHash}`
+}
+
 function feedbackMailto() {
   const subject = encodeURIComponent('ProofStamp feedback')
   const body = encodeURIComponent(
@@ -33,15 +40,21 @@ function feedbackMailto() {
 function renderFeedbackState(container, response) {
   const yes = container.querySelector('#feedback-yes')
   const no = container.querySelector('#feedback-no')
+  const actions = container.querySelector('.email-feedback-actions')
   const message = container.querySelector('#feedback-message')
   const detail = container.querySelector('#feedback-detail')
 
-  if (!response) return
-
-  yes.disabled = true
-  no.disabled = true
   yes.setAttribute('aria-pressed', String(response === 'yes'))
   no.setAttribute('aria-pressed', String(response === 'no'))
+
+  if (!response) {
+    actions.hidden = false
+    message.hidden = true
+    detail.hidden = true
+    return
+  }
+
+  actions.hidden = true
   message.hidden = false
 
   if (response === 'yes') {
@@ -54,12 +67,18 @@ function renderFeedbackState(container, response) {
 }
 
 function submitFeedback(container, response) {
-  if (safeSessionGet(FEEDBACK_KEY)) return
   const receipt = readReceipt()
-  if (!receipt) return
+  const storageKey = feedbackStorageKey(receipt)
+  if (!receipt || !storageKey) return
+
+  const existing = safeSessionGet(storageKey)
+  if (existing) {
+    renderFeedbackState(container, existing)
+    return
+  }
 
   trackFeedback(receipt, response)
-  safeSessionSet(FEEDBACK_KEY, response)
+  safeSessionSet(storageKey, response)
   renderFeedbackState(container, response)
 }
 
@@ -84,7 +103,9 @@ function ensureFeedbackUi() {
   feedback.querySelector('#feedback-yes').addEventListener('click', () => submitFeedback(feedback, 'yes'))
   feedback.querySelector('#feedback-no').addEventListener('click', () => submitFeedback(feedback, 'no'))
 
-  renderFeedbackState(feedback, safeSessionGet(FEEDBACK_KEY))
+  const receipt = readReceipt()
+  const storageKey = feedbackStorageKey(receipt)
+  renderFeedbackState(feedback, storageKey ? safeSessionGet(storageKey) : null)
 }
 
 ensureFeedbackUi()
