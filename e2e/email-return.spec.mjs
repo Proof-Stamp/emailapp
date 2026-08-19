@@ -6,15 +6,22 @@ const photo = {
   buffer: Buffer.from('proofstamp-email-return-photo')
 }
 
-async function createProofstamp(page, metrics = null) {
-  await page.route('**/api/metrics', async (route) => {
-    if (metrics) metrics.push(JSON.parse(route.request().postData() || '{}'))
-    await route.fulfill({ status: 204, body: '' })
-  })
+async function createProofstamp(page, metrics = null, options = {}) {
+  if (metrics) {
+    await page.route('**/api/metrics', async (route) => {
+      metrics.push(JSON.parse(route.request().postData() || '{}'))
+      await route.fulfill({ status: 204, body: '' })
+    })
+  } else {
+    await page.route('**/api/metrics', async (route) => {
+      await route.fulfill({ status: 204, body: '' })
+    })
+  }
+
   await page.goto('/')
-  await page.locator('#file-input').setInputFiles(photo)
+  await page.locator('#file-input').setInputFiles(options.photo || photo)
   await page.locator('#hash-file').click()
-  await page.locator('#description').fill('Apartment condition before moving out')
+  await page.locator('#description').fill(options.description || 'Apartment condition before moving out')
   await page.locator('#primary-email').fill('person@example.com')
   await page.locator('button[type="submit"]').click()
   await expect(page.locator('#receipt-stage')).toBeVisible()
@@ -47,7 +54,7 @@ test.describe('email app return flow', () => {
     await expect(page.locator('#expected-hash')).toHaveValue(/return-photo\.jpg/)
   })
 
-  test('records one anonymous Not quite response and offers an email follow-up', async ({ page }) => {
+  test('records one anonymous Not quite response without leaving stuck buttons', async ({ page }) => {
     const metrics = []
     await createProofstamp(page, metrics)
     await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
@@ -55,18 +62,57 @@ test.describe('email app return flow', () => {
 
     await page.locator('#feedback-no').click()
     await expect.poll(() => metrics.filter((metric) => metric.event === 'feedback_no').length).toBe(1)
-    expect(metrics.find((metric) => metric.event === 'feedback_no')).toEqual({ event: 'feedback_no' })
+    const feedbackMetric = metrics.find((metric) => metric.event === 'feedback_no')
+    expect(feedbackMetric?.event).toBe('feedback_no')
+    expect(feedbackMetric).not.toHaveProperty('fileName')
+    expect(feedbackMetric).not.toHaveProperty('hash')
+    expect(feedbackMetric).not.toHaveProperty('email')
 
+    await expect(page.locator('.email-feedback-actions')).toBeHidden()
     await expect(page.locator('#feedback-message')).toContainText('A short note would help us fix it')
     await expect(page.locator('#feedback-detail')).toBeVisible()
     await expect(page.locator('#feedback-detail')).toHaveAttribute('href', /mailto:info@proofstamp\.org\?subject=ProofStamp%20feedback/)
-    await expect(page.locator('#feedback-yes')).toBeDisabled()
-    await expect(page.locator('#feedback-no')).toBeDisabled()
 
     await page.reload()
-    await expect(page.locator('#feedback-no')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.email-feedback-actions')).toBeHidden()
     await expect(page.locator('#feedback-detail')).toBeVisible()
     expect(metrics.filter((metric) => metric.event === 'feedback_no')).toHaveLength(1)
+  })
+
+  test('a new ProofStamp gets a fresh feedback choice in the same mobile session', async ({ page }) => {
+    const metrics = []
+    await createProofstamp(page, metrics)
+    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
+    await page.reload()
+    await page.locator('#feedback-no').click()
+    await expect(page.locator('.email-feedback-actions')).toBeHidden()
+
+    await page.locator('#return-create').click()
+    await expect(page.locator('#file-stage')).toBeVisible()
+
+    const secondPhoto = {
+      name: 'second-return-photo.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('proofstamp-second-email-return-photo')
+    }
+    await page.locator('#file-input').setInputFiles(secondPhoto)
+    await page.locator('#hash-file').click()
+    await page.locator('#description').fill('Second ProofStamp in the same session')
+    await page.locator('#primary-email').fill('person@example.com')
+    await page.locator('button[type="submit"]').click()
+    await expect(page.locator('#receipt-stage')).toBeVisible()
+
+    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
+    await page.reload()
+
+    await expect(page.locator('.email-feedback-actions')).toBeVisible()
+    await expect(page.locator('#feedback-yes')).toBeEnabled()
+    await expect(page.locator('#feedback-no')).toBeEnabled()
+
+    await page.locator('#feedback-yes').click()
+    await expect.poll(() => metrics.filter((metric) => metric.event === 'feedback_yes').length).toBe(1)
+    await expect(page.locator('.email-feedback-actions')).toBeHidden()
+    await expect(page.locator('#feedback-message')).toContainText('Thanks. That helps.')
   })
 
   test('does not double-count an email app open after reload', async ({ page }) => {
