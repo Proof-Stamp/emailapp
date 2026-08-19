@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#071b2c" />
     <meta
       name="description"
-      content="Create a private ProofStamp for a file and email it to yourself. Your file never leaves your device."
+      content="Create a private ProofStamp for a file and email it to yourself or someone else. Your file never leaves your device."
     />
     <title>ProofStamp for Important Files</title>
     <link rel="icon" href="/proofstamp-seal.svg" type="image/svg+xml" />
@@ -38,7 +38,7 @@
         <h1 id="hero-title">Give an important file a date you can point to.</h1>
         <p>
           Choose one file. ProofStamp creates a unique fingerprint and prepares a ProofStamp email
-          you can send to yourself. Your file stays on your device.
+          you can send to yourself or someone else. Your file stays on your device.
         </p>
         <ul class="trust-list" aria-label="Privacy and product benefits">
           <li><span aria-hidden="true">✓</span> No account</li>
@@ -131,18 +131,18 @@
               </div>
 
               <div class="field">
-                <label for="primary-email">Your email <span>Required</span></label>
-                <input id="primary-email" type="email" autocomplete="email" placeholder="you@example.com" required />
-                <small>The prepared email will be addressed to you. Your address stays in this browser.</small>
+                <label for="primary-email">Send ProofStamp to <span>Required</span></label>
+                <input id="primary-email" type="email" autocomplete="email" placeholder="you-or-recipient@example.com" required />
+                <small>Use your own inbox, or send it to someone who should be able to verify the file. The address stays in this browser.</small>
               </div>
 
               <div class="field recommended-field">
                 <div class="recommended-heading">
-                  <label for="second-email">Backup email address</label>
-                  <span class="recommended-label">Recommended</span>
+                  <label for="second-email">CC another email</label>
+                  <span class="recommended-label">Optional</span>
                 </div>
-                <input id="second-email" type="email" placeholder="your-second-inbox@example.net" />
-                <small>Optional. Add another inbox you control, preferably with a different email provider.</small>
+                <input id="second-email" type="email" placeholder="another@example.net" />
+                <small>Add another recipient or a backup inbox.</small>
               </div>
 
               <label class="checkbox-row">
@@ -161,7 +161,7 @@
             <div class="success-mark" aria-hidden="true">✓</div>
             <p class="stage-kicker">Step 3</p>
             <h2 id="receipt-stage-title">Your ProofStamp is ready</h2>
-            <p class="success-intro">Open your email app, check the ProofStamp, and send it to yourself.</p>
+            <p class="success-intro">Open your email app, check the ProofStamp, and send it.</p>
 
             <div class="receipt-preview">
               <div class="receipt-preview-header">
@@ -179,7 +179,7 @@
 
             <div class="keep-file-note">
               <strong>Keep the original file.</strong>
-              <p>You do not need to email it. Keep this exact file so you can check it against the ProofStamp later.</p>
+              <p>Keep or share this exact file if it may need to be verified later. The ProofStamp itself does not contain the file.</p>
             </div>
 
             <button id="create-another" class="text-button centered" type="button">Create another ProofStamp</button>
@@ -244,7 +244,7 @@
           <article>
             <span class="explanation-number">02</span>
             <h3>Email the ProofStamp</h3>
-            <p>Your inbox stores the fingerprint, your description, and the email received time.</p>
+            <p>Your inbox, or the recipient's inbox, stores the fingerprint, your description, and the email received time.</p>
           </article>
           <article>
             <span class="explanation-number">03</span>
@@ -257,7 +257,7 @@
           <p>
             It does not prove when or where the file was originally created, who made it, whether it was edited before
             the ProofStamp, or whether its contents are true. The email received time records when
-            the ProofStamp reached your inbox.
+            the ProofStamp reached the inbox.
           </p>
         </div>
       </section>
