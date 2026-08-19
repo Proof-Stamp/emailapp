@@ -17,11 +17,12 @@ The files are never uploaded. The app has no registration, backend, analytics, o
 
 ## Run locally
 
-The app is static and has no runtime dependencies.
+The app is static and has no runtime dependencies. Playwright is used only for development and browser tests.
 
 ```bash
-npm test
-npm run build
+npm install
+npx playwright install chromium
+npm run check
 npx serve public
 ```
 
@@ -53,4 +54,4 @@ See [docs/architecture.md](docs/architecture.md) for the ProofStamp format and v
 
 ## Automated checks
 
-`npm run check` runs the unit tests and production build. GitHub Actions runs the same command for every pull request and every push to `main`.
+`npm run check` runs unit tests, builds the production site, and runs Playwright browser tests at a 390×844 mobile viewport. GitHub Actions installs Chromium and runs the same checks for every pull request and every push to `main`.
