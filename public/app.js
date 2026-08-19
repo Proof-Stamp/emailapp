@@ -1,26 +1,32 @@
-import { MAX_FILE_SIZE_BYTES, extractSha256, sha256File } from './hash.js'
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILES_PER_PROOFSTAMP,
+  extractProofstampFileHashes,
+  extractSetSha256,
+  setFingerprint,
+  sha256File
+} from './hash.js'
 import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEmail, receiptToText } from './receipt.js'
 
 const $ = (selector) => document.querySelector(selector)
 const els = {
   createTab: $('#create-tab'), verifyTab: $('#verify-tab'), createPanel: $('#create-panel'), verifyPanel: $('#verify-panel'),
-  createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFile: $('#selected-file'),
-  selectedFileName: $('#selected-file-name'), selectedFileMeta: $('#selected-file-meta'), removeFile: $('#remove-file'), hashFile: $('#hash-file'),
+  createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'), hashFile: $('#hash-file'),
   fileStage: $('#file-stage'), detailsStage: $('#details-stage'), receiptStage: $('#receipt-stage'), startOver: $('#start-over'),
   hashValue: $('#hash-value'), copyHash: $('#copy-hash'), receiptForm: $('#receipt-form'), description: $('#description'),
   descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'),
   includeFilename: $('#include-filename'), receiptSummary: $('#receipt-summary'), providerCount: $('#receipt-provider-count'),
   openEmail: $('#open-email'), copyReceipt: $('#copy-receipt'), downloadReceipt: $('#download-receipt'), createAnother: $('#create-another'),
   verifyAlert: $('#verify-alert'), expectedHash: $('#expected-hash'), verifyFile: $('#verify-file'), verifyDropZone: $('#verify-drop-zone'),
-  verifySelectedFile: $('#verify-selected-file'), verifySelectedFileName: $('#verify-selected-file-name'),
-  verifySelectedFileMeta: $('#verify-selected-file-meta'), removeVerifyFile: $('#remove-verify-file'),
-  verifyButton: $('#verify-button'), verifyResult: $('#verify-result'), verifyResultIcon: $('#verify-result-icon'),
-  verifyResultTitle: $('#verify-result-title'), verifyResultCopy: $('#verify-result-copy'), actualHash: $('#actual-hash')
+  verifySelectedFiles: $('#verify-selected-files'), verifyButton: $('#verify-button'), verifyResult: $('#verify-result'),
+  verifyResultIcon: $('#verify-result-icon'), verifyResultTitle: $('#verify-result-title'), verifyResultCopy: $('#verify-result-copy'),
+  actualHash: $('#actual-hash')
 }
 
-let selectedFile = null
-let selectedVerifyFile = null
-let currentHash = ''
+let selectedFiles = []
+let selectedVerifyFiles = []
+let currentFileProofs = []
+let currentSetHash = ''
 let currentReceipt = null
 
 function showAlert(element, message) {
@@ -46,27 +52,83 @@ function switchTab(mode) {
   history.replaceState(null, '', create ? '/' : '/verify')
 }
 
-function acceptFile(file) {
-  showAlert(els.createAlert, '')
-  if (!file) return
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    showAlert(els.createAlert, 'Choose a file smaller than 50 MB.')
-    return
+function validateFiles(files, alertElement) {
+  if (!files.length) return false
+  if (files.length > MAX_FILES_PER_PROOFSTAMP) {
+    showAlert(alertElement, `Choose up to ${MAX_FILES_PER_PROOFSTAMP} files at a time.`)
+    return false
   }
-  selectedFile = file
-  currentHash = ''
-  els.selectedFileName.textContent = file.name
-  els.selectedFileMeta.textContent = `${formatBytes(file.size)}${file.type ? ` · ${file.type}` : ''}`
-  els.selectedFile.hidden = false
-  els.hashFile.hidden = false
+  const tooLarge = files.find((file) => file.size > MAX_FILE_SIZE_BYTES)
+  if (tooLarge) {
+    showAlert(alertElement, `${tooLarge.name} is larger than 50 MB.`)
+    return false
+  }
+  return true
+}
+
+function makeFileRow(file, index, onRemove) {
+  const row = document.createElement('div')
+  row.className = 'selected-file'
+
+  const icon = document.createElement('div')
+  icon.className = 'file-icon'
+  icon.setAttribute('aria-hidden', 'true')
+  icon.textContent = 'FILE'
+
+  const copy = document.createElement('div')
+  copy.className = 'file-copy'
+  const name = document.createElement('strong')
+  name.textContent = file.name
+  const meta = document.createElement('span')
+  meta.textContent = `${formatBytes(file.size)}${file.type ? ` · ${file.type}` : ''}`
+  copy.append(name, meta)
+
+  const remove = document.createElement('button')
+  remove.className = 'icon-button'
+  remove.type = 'button'
+  remove.setAttribute('aria-label', `Remove ${file.name}`)
+  remove.textContent = '×'
+  remove.addEventListener('click', () => onRemove(index))
+
+  row.append(icon, copy, remove)
+  return row
+}
+
+function renderCreateFiles() {
+  els.selectedFiles.replaceChildren(...selectedFiles.map((file, index) => makeFileRow(file, index, removeCreateFile)))
+  els.selectedFiles.hidden = selectedFiles.length === 0
+  els.hashFile.hidden = selectedFiles.length === 0
+  els.hashFile.textContent = selectedFiles.length === 1 ? 'Create file fingerprint' : `Create ${selectedFiles.length} file fingerprints`
+}
+
+function acceptFiles(fileList) {
+  showAlert(els.createAlert, '')
+  const files = Array.from(fileList || [])
+  if (!validateFiles(files, els.createAlert)) return
+  selectedFiles = files
+  currentFileProofs = []
+  currentSetHash = ''
+  currentReceipt = null
+  renderCreateFiles()
+}
+
+function removeCreateFile(index) {
+  selectedFiles.splice(index, 1)
+  currentFileProofs = []
+  currentSetHash = ''
+  currentReceipt = null
+  els.fileInput.value = ''
+  renderCreateFiles()
 }
 
 function resetCreate() {
-  selectedFile = null
-  currentHash = ''
+  selectedFiles = []
+  currentFileProofs = []
+  currentSetHash = ''
   currentReceipt = null
   els.fileInput.value = ''
-  els.selectedFile.hidden = true
+  els.selectedFiles.replaceChildren()
+  els.selectedFiles.hidden = true
   els.hashFile.hidden = true
   els.fileStage.hidden = false
   els.detailsStage.hidden = true
@@ -78,22 +140,45 @@ function resetCreate() {
   setStep(1)
 }
 
-async function calculateHash() {
-  if (!selectedFile) return
+async function calculateHashes() {
+  if (!selectedFiles.length) return
   els.hashFile.disabled = true
-  els.hashFile.textContent = 'Creating fingerprint…'
+  currentFileProofs = []
+  currentSetHash = ''
+
   try {
-    currentHash = await sha256File(selectedFile)
-    els.hashValue.textContent = currentHash
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      const file = selectedFiles[index]
+      els.hashFile.textContent = selectedFiles.length === 1
+        ? 'Creating fingerprint…'
+        : `Creating fingerprints… ${index + 1}/${selectedFiles.length}`
+      const hash = await sha256File(file)
+      currentFileProofs.push({ file, hash })
+    }
+
+    if (currentFileProofs.length > 1) {
+      currentSetHash = await setFingerprint(currentFileProofs.map(({ hash }) => hash))
+    }
+
+    const fingerprintLines = currentFileProofs.flatMap(({ file, hash }, index) => [
+      `${index + 1}. ${file.name}`,
+      hash,
+      ''
+    ])
+    if (currentSetHash) fingerprintLines.push('Set fingerprint', currentSetHash)
+    els.hashValue.textContent = fingerprintLines.join('\n').trim()
+
     els.fileStage.hidden = true
     els.detailsStage.hidden = false
     setStep(2)
     els.description.focus()
   } catch {
-    showAlert(els.createAlert, 'This browser could not read that file. Try choosing it again.')
+    currentFileProofs = []
+    currentSetHash = ''
+    showAlert(els.createAlert, 'This browser could not read one of those files. Try choosing the files again.')
   } finally {
     els.hashFile.disabled = false
-    els.hashFile.textContent = 'Create file fingerprint'
+    els.hashFile.textContent = selectedFiles.length === 1 ? 'Create file fingerprint' : `Create ${selectedFiles.length} file fingerprints`
   }
 }
 
@@ -101,21 +186,26 @@ function createReceipt() {
   const description = els.description.value.trim()
   const primaryEmail = els.primaryEmail.value.trim()
   const secondEmail = els.secondEmail.value.trim()
-  if (!description) return showAlert(els.createAlert, 'Add a short description so you can recognize this file later.')
+  if (!description) return showAlert(els.createAlert, 'Add a short description so you can recognize these files later.')
   if (!isValidEmail(primaryEmail)) return showAlert(els.createAlert, 'Enter a valid email address.')
   if (secondEmail && !isValidEmail(secondEmail)) return showAlert(els.createAlert, 'Enter a valid CC email address or leave it blank.')
   if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
     return showAlert(els.createAlert, 'Use a different address for CC.')
   }
-  if (!currentHash || !selectedFile) return showAlert(els.createAlert, 'Select a file and create its fingerprint first.')
+  if (!currentFileProofs.length || currentFileProofs.length !== selectedFiles.length) {
+    return showAlert(els.createAlert, 'Choose the files and create their fingerprints first.')
+  }
 
   currentReceipt = buildReceipt({
-    hash: currentHash,
     description,
-    fileName: selectedFile.name,
     includeFilename: els.includeFilename.checked,
-    fileSizeBytes: selectedFile.size,
-    mediaType: selectedFile.type
+    files: currentFileProofs.map(({ file, hash }) => ({
+      hash,
+      fileName: file.name,
+      fileSizeBytes: file.size,
+      mediaType: file.type
+    })),
+    setHash: currentSetHash
   })
   currentReceipt._delivery = { primaryEmail, secondEmail }
   renderReceipt()
@@ -133,14 +223,18 @@ function publicReceipt() {
 function renderReceipt() {
   const receipt = publicReceipt()
   const { primaryEmail, secondEmail } = currentReceipt._delivery
+  const totalSize = receipt.files.reduce((sum, file) => sum + file.file_size_bytes, 0)
   const rows = [
     ['To', primaryEmail],
     ...(secondEmail ? [['CC', secondEmail]] : []),
     ['Description', receipt.description],
-    ...(receipt.file_name ? [['Filename', receipt.file_name]] : []),
-    ['Size', formatBytes(receipt.file_size_bytes)],
-    ['File fingerprint (SHA-256)', receipt.hash],
-    ['Device time', new Date(receipt.created_at_device).toLocaleString()]
+    ['Files', receipt.files.length === 1 ? '1 file' : `${receipt.files.length} files`],
+    ...(receipt.files.length === 1 && receipt.files[0].file_name ? [['Filename', receipt.files[0].file_name]] : []),
+    [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
+    ...(receipt.files.length === 1
+      ? [['File fingerprint (SHA-256)', receipt.files[0].hash]]
+      : [['Set fingerprint (SHA-256)', receipt.set_hash]]),
+    ['Created at', new Date(receipt.created_at_device).toLocaleString()]
   ]
   els.receiptSummary.replaceChildren(...rows.flatMap(([key, value]) => {
     const dt = document.createElement('dt')
@@ -169,33 +263,43 @@ async function copyText(text, button, label) {
 }
 
 function downloadReceipt() {
-  const blob = new Blob([receiptToText(publicReceipt())], { type: 'text/plain;charset=utf-8' })
+  const receipt = publicReceipt()
+  const keyHash = receipt.set_hash || receipt.files[0].hash
+  const blob = new Blob([receiptToText(receipt)], { type: 'text/plain;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `proofstamp-${currentHash.slice(0, 12)}.txt`
+  link.download = `proofstamp-${keyHash.slice(0, 12)}.txt`
   link.click()
   URL.revokeObjectURL(link.href)
 }
 
-function acceptVerifyFile(file) {
-  showAlert(els.verifyAlert, '')
-  els.verifyResult.hidden = true
-  if (!file) return
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    els.verifyFile.value = ''
-    showAlert(els.verifyAlert, 'Choose a file smaller than 50 MB.')
-    return
-  }
-  selectedVerifyFile = file
-  els.verifySelectedFileName.textContent = file.name
-  els.verifySelectedFileMeta.textContent = `${formatBytes(file.size)}${file.type ? ` · ${file.type}` : ''}`
-  els.verifySelectedFile.hidden = false
+function renderVerifyFiles() {
+  els.verifySelectedFiles.replaceChildren(...selectedVerifyFiles.map((file, index) => makeFileRow(file, index, removeVerifyFile)))
+  els.verifySelectedFiles.hidden = selectedVerifyFiles.length === 0
 }
 
-function resetVerifyFile() {
-  selectedVerifyFile = null
+function acceptVerifyFiles(fileList) {
+  showAlert(els.verifyAlert, '')
+  els.verifyResult.hidden = true
+  const files = Array.from(fileList || [])
+  if (!validateFiles(files, els.verifyAlert)) return
+  selectedVerifyFiles = files
+  renderVerifyFiles()
+}
+
+function removeVerifyFile(index) {
+  selectedVerifyFiles.splice(index, 1)
   els.verifyFile.value = ''
-  els.verifySelectedFile.hidden = true
+  els.verifyResult.hidden = true
+  showAlert(els.verifyAlert, '')
+  renderVerifyFiles()
+}
+
+function resetVerifyFiles() {
+  selectedVerifyFiles = []
+  els.verifyFile.value = ''
+  els.verifySelectedFiles.replaceChildren()
+  els.verifySelectedFiles.hidden = true
   els.verifyResult.hidden = true
   showAlert(els.verifyAlert, '')
 }
@@ -203,61 +307,103 @@ function resetVerifyFile() {
 async function verify() {
   showAlert(els.verifyAlert, '')
   els.verifyResult.hidden = true
-  const expected = extractSha256(els.expectedHash.value)
-  const file = selectedVerifyFile || els.verifyFile.files[0]
-  if (!file) return showAlert(els.verifyAlert, 'Choose the file you want to check.')
-  if (!expected) return showAlert(els.verifyAlert, 'Paste a valid 64-character fingerprint or the full ProofStamp email.')
-  if (file.size > MAX_FILE_SIZE_BYTES) return showAlert(els.verifyAlert, 'Choose a file smaller than 50 MB.')
+
+  const expectedHashes = extractProofstampFileHashes(els.expectedHash.value)
+  const expectedSetHash = extractSetSha256(els.expectedHash.value)
+  if (!selectedVerifyFiles.length) return showAlert(els.verifyAlert, 'Choose one or more files you want to check.')
+  if (!expectedHashes.length) return showAlert(els.verifyAlert, 'Paste a valid fingerprint or the full ProofStamp email.')
+
   els.verifyButton.disabled = true
-  els.verifyButton.textContent = 'Checking the file…'
+  const actual = []
+
   try {
-    const actual = await sha256File(file)
-    const match = actual === expected
+    for (let index = 0; index < selectedVerifyFiles.length; index += 1) {
+      const file = selectedVerifyFiles[index]
+      els.verifyButton.textContent = selectedVerifyFiles.length === 1
+        ? 'Checking the file…'
+        : `Checking files… ${index + 1}/${selectedVerifyFiles.length}`
+      actual.push({ file, hash: await sha256File(file) })
+    }
+
+    const remaining = new Map()
+    expectedHashes.forEach((hash) => remaining.set(hash, (remaining.get(hash) || 0) + 1))
+    const results = actual.map(({ file, hash }) => {
+      const count = remaining.get(hash) || 0
+      const match = count > 0
+      if (match) remaining.set(hash, count - 1)
+      return { file, hash, match }
+    })
+
+    const matchedCount = results.filter(({ match }) => match).length
+    const allIndividualMatch = matchedCount === results.length
+    const checkingCompleteSet = actual.length === expectedHashes.length
+    let setMatches = null
+    if (checkingCompleteSet && expectedSetHash) {
+      const actualSetHash = await setFingerprint(actual.map(({ hash }) => hash))
+      setMatches = actualSetHash === expectedSetHash
+    }
+
+    const success = allIndividualMatch && setMatches !== false
     els.verifyResult.hidden = false
-    els.verifyResult.className = `verify-result ${match ? 'match' : 'mismatch'}`
-    els.verifyResultIcon.textContent = match ? '✓' : '×'
-    els.verifyResultTitle.textContent = match ? 'This file matches the ProofStamp' : 'This file does not match the ProofStamp'
-    els.verifyResultCopy.textContent = match
-      ? 'The file has exactly the same contents as the file used to make the ProofStamp.'
-      : 'This is a different file, or the file changed after the ProofStamp was created.'
-    els.actualHash.textContent = actual
+    els.verifyResult.className = `verify-result ${success ? 'match' : 'mismatch'}`
+    els.verifyResultIcon.textContent = success ? '✓' : '×'
+
+    if (success && checkingCompleteSet && actual.length > 1) {
+      els.verifyResultTitle.textContent = `All ${actual.length} files match this ProofStamp set`
+      els.verifyResultCopy.textContent = expectedSetHash
+        ? 'The selected files match the complete set recorded in this ProofStamp.'
+        : 'Every selected file matches a fingerprint in this ProofStamp.'
+    } else if (success && actual.length === 1) {
+      els.verifyResultTitle.textContent = 'This file matches the ProofStamp'
+      els.verifyResultCopy.textContent = 'The file has exactly the same contents as a file recorded in this ProofStamp.'
+    } else if (success) {
+      els.verifyResultTitle.textContent = `All ${actual.length} selected files match this ProofStamp`
+      els.verifyResultCopy.textContent = 'Every selected file matches a fingerprint in this ProofStamp.'
+    } else {
+      els.verifyResultTitle.textContent = `${matchedCount} of ${actual.length} selected files match this ProofStamp`
+      els.verifyResultCopy.textContent = setMatches === false
+        ? 'The individual files match, but the complete set does not match the recorded set fingerprint.'
+        : 'A non-matching file is different, changed, or was not part of this ProofStamp.'
+    }
+
+    els.actualHash.textContent = results
+      .map(({ file, hash, match }) => `${match ? '✓' : '×'} ${file.name}\n${hash}`)
+      .join('\n\n')
   } catch {
-    showAlert(els.verifyAlert, 'This browser could not read that file. Try choosing it again.')
+    showAlert(els.verifyAlert, 'This browser could not read one of those files. Try choosing the files again.')
   } finally {
     els.verifyButton.disabled = false
-    els.verifyButton.textContent = 'Check file'
+    els.verifyButton.textContent = 'Check files'
   }
 }
 
 els.createTab.addEventListener('click', () => switchTab('create'))
 els.verifyTab.addEventListener('click', () => switchTab('verify'))
-els.fileInput.addEventListener('change', () => acceptFile(els.fileInput.files[0]))
+els.fileInput.addEventListener('change', () => acceptFiles(els.fileInput.files))
 els.dropZone.addEventListener('dragover', (event) => { event.preventDefault(); els.dropZone.classList.add('dragging') })
 els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('dragging'))
 els.dropZone.addEventListener('drop', (event) => {
   event.preventDefault()
   els.dropZone.classList.remove('dragging')
-  acceptFile(event.dataTransfer.files[0])
+  acceptFiles(event.dataTransfer.files)
 })
-els.removeFile.addEventListener('click', resetCreate)
-els.hashFile.addEventListener('click', calculateHash)
+els.hashFile.addEventListener('click', calculateHashes)
 els.startOver.addEventListener('click', resetCreate)
 els.description.addEventListener('input', () => { els.descriptionCount.textContent = `${els.description.value.length} / 500` })
-els.copyHash.addEventListener('click', () => copyText(currentHash, els.copyHash, 'Copied'))
+els.copyHash.addEventListener('click', () => copyText(els.hashValue.textContent, els.copyHash, 'Copied'))
 els.receiptForm.addEventListener('submit', (event) => { event.preventDefault(); createReceipt() })
 els.openEmail.addEventListener('click', openEmail)
 els.copyReceipt.addEventListener('click', () => copyText(receiptToText(publicReceipt()), els.copyReceipt, 'Copied'))
 els.downloadReceipt.addEventListener('click', downloadReceipt)
 els.createAnother.addEventListener('click', resetCreate)
-els.verifyFile.addEventListener('change', () => acceptVerifyFile(els.verifyFile.files[0]))
+els.verifyFile.addEventListener('change', () => acceptVerifyFiles(els.verifyFile.files))
 els.verifyDropZone.addEventListener('dragover', (event) => { event.preventDefault(); els.verifyDropZone.classList.add('dragging') })
 els.verifyDropZone.addEventListener('dragleave', () => els.verifyDropZone.classList.remove('dragging'))
 els.verifyDropZone.addEventListener('drop', (event) => {
   event.preventDefault()
   els.verifyDropZone.classList.remove('dragging')
-  acceptVerifyFile(event.dataTransfer.files[0])
+  acceptVerifyFiles(event.dataTransfer.files)
 })
-els.removeVerifyFile.addEventListener('click', resetVerifyFile)
 els.verifyButton.addEventListener('click', verify)
 
 if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify')
