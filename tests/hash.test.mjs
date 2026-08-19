@@ -110,7 +110,7 @@ test('formats the device timestamp for a human reader', () => {
   )
 })
 
-test('builds a standards-friendly mailto URL with complete single-file ProofStamp', () => {
+test('builds a standards-friendly mailto URL with clean single-file ProofStamp', () => {
   const mailto = createMailtoUrl({
     receipt,
     primaryEmail: 'person@example.com',
@@ -123,23 +123,36 @@ test('builds a standards-friendly mailto URL with complete single-file ProofStam
   assert.equal(url.protocol, 'mailto:')
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
-  assert.match(url.searchParams.get('body'), new RegExp(receiptHash))
-  assert.match(url.searchParams.get('body'), /VERIFY THE FILE/)
-  assert.match(url.searchParams.get('body'), /Free\. Private\. No registration\. Your file stays on your device\./)
-  assert.match(url.searchParams.get('body'), /ProofStamp your own file →/)
+  const body = url.searchParams.get('body')
+  assert.match(body, new RegExp(receiptHash))
+  assert.match(body, /Here is a ProofStamp for Apartment condition before moving in\./)
+  assert.match(body, /VERIFY THE FILE/)
+  assert.match(body, /\nFILE\nbedroom\.jpg · 2\.0 KB/)
+  assert.match(body, /Keep the original file\. If its fingerprint matches this ProofStamp later, the file has not changed\./)
+  assert.match(body, /The email received time shows when this ProofStamp reached the inbox\./)
+  assert.match(body, /Free\. Private\. No registration\. Your file stays on your device\./)
+  assert.match(body, /Create your own ProofStamp →/)
+  assert.doesNotMatch(body, /ABOUT THIS PROOFSTAMP/)
+  assert.doesNotMatch(body, /I sent you a ProofStamp/)
+  assert.doesNotMatch(body, /Use it to check later/)
 })
 
 test('renders a concise multi-file ProofStamp email', () => {
   const text = receiptToText(multiReceipt)
-  assert.match(text, /3 files were fingerprinted/)
+  assert.match(text, /Here is a ProofStamp for Apartment condition before moving out\./)
   assert.match(text, /VERIFY THE FILES/)
+  assert.match(text, /\nFILES\n/)
   assert.match(text, /1\. front\.jpg · 1\.0 KB/)
   assert.match(text, /2\. kitchen\.jpg · 2\.0 KB/)
   assert.match(text, /3\. bedroom\.jpg · 3\.0 KB/)
-  assert.doesNotMatch(text, /Set fingerprint/)
   assert.match(text, /Created at: August 19, 2026 at 4:24 PM UTC/)
+  assert.match(text, /Keep the original files\. If their fingerprints match this ProofStamp later, the files have not changed\./)
+  assert.match(text, /The email received time shows when this ProofStamp reached the inbox\./)
   assert.match(text, /Free\. Private\. No registration\. Your files stay on your device\./)
-  assert.match(text, /ProofStamp your own files →/)
+  assert.match(text, /Create your own ProofStamp →/)
+  assert.doesNotMatch(text, /3 files were fingerprinted/)
+  assert.doesNotMatch(text, /ABOUT THIS PROOFSTAMP/)
+  assert.doesNotMatch(text, /Set fingerprint/)
   assert.doesNotMatch(text, /Created on this device/)
 })
 
