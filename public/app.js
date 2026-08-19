@@ -103,9 +103,9 @@ function createReceipt() {
   const secondEmail = els.secondEmail.value.trim()
   if (!description) return showAlert(els.createAlert, 'Add a short description so you can recognize this file later.')
   if (!isValidEmail(primaryEmail)) return showAlert(els.createAlert, 'Enter a valid email address.')
-  if (secondEmail && !isValidEmail(secondEmail)) return showAlert(els.createAlert, 'Enter a valid backup email address or leave it blank.')
+  if (secondEmail && !isValidEmail(secondEmail)) return showAlert(els.createAlert, 'Enter a valid CC email address or leave it blank.')
   if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
-    return showAlert(els.createAlert, 'Use a different address for the backup email.')
+    return showAlert(els.createAlert, 'Use a different address for CC.')
   }
   if (!currentHash || !selectedFile) return showAlert(els.createAlert, 'Select a file and create its fingerprint first.')
 
@@ -134,8 +134,8 @@ function renderReceipt() {
   const receipt = publicReceipt()
   const { primaryEmail, secondEmail } = currentReceipt._delivery
   const rows = [
-    ['Primary email', primaryEmail],
-    ...(secondEmail ? [['Backup email', secondEmail]] : []),
+    ['To', primaryEmail],
+    ...(secondEmail ? [['CC', secondEmail]] : []),
     ['Description', receipt.description],
     ...(receipt.file_name ? [['Filename', receipt.file_name]] : []),
     ['Size', formatBytes(receipt.file_size_bytes)],
