@@ -1,12 +1,16 @@
 {
   "name": "proofstamp-email-receipt",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test",
-    "check": "npm test && npm run build"
+    "test:e2e": "playwright test",
+    "check": "npm test && npm run build && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
   },
   "engines": {
     "node": "22.x"

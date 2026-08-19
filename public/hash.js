@@ -1,6 +1,6 @@
 export const HASH_ALGORITHM = 'SHA-256'
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
-export const MAX_FILES_PER_PROOFSTAMP = 10
+export const MAX_FILES_PER_PROOFSTAMP = 5
 
 export function bytesToHex(bytes) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')

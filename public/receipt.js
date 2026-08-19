@@ -1,8 +1,9 @@
 import { MAX_FILES_PER_PROOFSTAMP, isSha256 } from './hash.js'
+import { trackEmailAppOpened, trackProofCreated } from './metrics.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
 export const RECEIPT_VERSION = '2.0'
-export const APP_VERSION = '0.3.0'
+export const APP_VERSION = '0.3.2'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
@@ -79,8 +80,7 @@ export function createReceipt({
   }
 
   const normalizedFiles = sourceFiles.map((file) => normalizeFile(file, includeFilename))
-
-  return {
+  const receipt = {
     schema: RECEIPT_SCHEMA,
     version: RECEIPT_VERSION,
     hash_algorithm: 'SHA-256',
@@ -90,6 +90,9 @@ export function createReceipt({
     verification_url: VERIFICATION_URL,
     app_version: APP_VERSION
   }
+
+  trackProofCreated(receipt)
+  return receipt
 }
 
 export function receiptToText(receipt) {
@@ -147,6 +150,7 @@ export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
     `body=${encodeMailtoBody(receiptToText(receipt))}`
   ]
   if (secondEmail) params.push(`cc=${encodeURIComponent(secondEmail)}`)
+  trackEmailAppOpened(receipt)
   return `mailto:${encodeURIComponent(primaryEmail)}?${params.join('&')}`
 }
 

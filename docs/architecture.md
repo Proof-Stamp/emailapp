@@ -2,7 +2,7 @@
 
 ## Product flow
 
-1. The user selects 1–10 files.
+1. The user selects 1–5 files.
 2. The browser calculates a SHA-256 fingerprint for each file with Web Crypto.
 3. The user adds one required description and a destination email.
 4. The user can add an optional CC address.
@@ -12,16 +12,22 @@
 
 ## Privacy boundary
 
-The deployed app is a set of static files. There is no application server.
+File processing remains local to the browser.
 
 - Source files stay on the user's device.
 - Files are read only inside the browser for hashing.
-- Email addresses stay in browser memory.
-- ProofStamp email generation uses a `mailto:` URL.
-- No external processing is required.
-- No registration, cookies, telemetry, or database are required.
+- Email addresses stay in browser memory and are used only to construct the local `mailto:` URL.
+- No file contents, fingerprints, filenames, descriptions, email addresses, or file metadata are sent to ProofStamp.
+- No registration, cookies, user account, or identity tracking is required.
 
-The external action begins only when the user opens their email client and sends the prepared message. At that point, the user's chosen email provider processes the ProofStamp email in the normal way.
+The app sends two optional aggregate usage events to the same-origin `/api/metrics` Pages Function:
+
+- `{ "event": "proof_created", "fileCount": 1..5 }`
+- `{ "event": "email_opened" }`
+
+These events update a single aggregate row in Cloudflare D1. There is no per-user or per-ProofStamp event table. The counters are used to calculate total ProofStamps created, the share that opened the email app, and average files per ProofStamp.
+
+The `email_opened` event records a click on the button that hands the prepared `mailto:` URL to the user's device. It cannot confirm that the email was actually sent.
 
 ## File fingerprints
 
@@ -79,6 +85,23 @@ A SHA-256 match shows that two sequences of bytes are identical with extremely h
 
 It does not independently establish the original creation time, source, authorship, location, pre-ProofStamp editing history, or truth of the files' contents. Users should retain the original files and the full email, including headers, when evidence quality matters.
 
-## Initial deployment
+## Aggregate metrics
 
-The repository builds to `dist/` with `npm run build`. It can be hosted on Cloudflare Pages or any static host. The `_redirects` file sends `/verify` to the single-page app.
+`functions/api/metrics.js` uses a D1 binding named `METRICS_DB` and maintains one row with:
+
+- `proofstamps_created`
+- `email_app_opened`
+- `total_files`
+- `updated_at`
+
+`GET /api/metrics` derives:
+
+- total ProofStamps created
+- email-app open rate
+- average files per ProofStamp
+
+The database starts at zero when first configured. Historical ProofStamps created before this counter existed cannot be reconstructed from these metrics.
+
+## Deployment
+
+The repository builds the static client to `dist/` with `npm run build`. Cloudflare Pages serves the static files and the `/functions` directory provides the metrics endpoint. The `_redirects` file sends `/verify` to the single-page app.
