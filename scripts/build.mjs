@@ -80,7 +80,7 @@ function addHomeSeo(html) {
     )
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${pageTitle}</title>`)
     .replace(
-      '    <link rel="icon" href="/proofstamp-seal.svg" type="image/svg+xml" />',
+      /    <link rel="icon" href="\/proofstamp-seal\.svg(?:\?v=[^"]+)?" type="image\/svg\+xml" \/>/,
       `${seoHead}\n    <link rel="icon" href="/proofstamp-seal.svg" type="image/svg+xml" />`
     )
 }
@@ -96,7 +96,7 @@ function addStatsRobotsMeta(html) {
 function addReleaseVersion(html) {
   return html
     .replace(/<span>ProofStamp(?: · v[0-9.]+)?<\/span>/, `<span>ProofStamp · v${appVersion}</span>`)
-    .replace(/(href|src)="(\/[^"?]+\.(?:css|js|svg))"/g, `$1="$2?v=${appVersion}"`)
+    .replace(/(href|src)="(\/[^"?]+\.(?:css|js|svg))(?:\?v=[^"]+)?"/g, `$1="$2?v=${appVersion}"`)
 }
 
 await rm(destination, { recursive: true, force: true })
