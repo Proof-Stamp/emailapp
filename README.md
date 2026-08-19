@@ -55,7 +55,7 @@ The Function initializes the single aggregate row automatically. `migrations/000
 - `emailOpenRatePct`
 - `averageFilesPerProofstamp`
 
-The counters start at zero when the D1 database is first connected. They do not reconstruct historical ProofStamps.
+The public `/stats` page renders these values as three simple aggregate metrics. The counters start at zero when the D1 database is first connected. They do not reconstruct historical ProofStamps.
 
 ## Privacy and security
 
