@@ -4,6 +4,8 @@ import { resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 const source = resolve(root, 'public')
 const destination = resolve(root, 'dist')
+const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'))
+const appVersion = packageJson.version
 
 const canonicalUrl = 'https://email.proofstamp.org/'
 const pageTitle = 'ProofStamp via Email | Timestamp Photos & Documents Privately'
@@ -91,6 +93,12 @@ function addStatsRobotsMeta(html) {
   )
 }
 
+function addReleaseVersion(html) {
+  return html
+    .replace('<span>ProofStamp</span>', `<span>ProofStamp · v${appVersion}</span>`)
+    .replace(/(href|src)="(\/[^"?]+\.(?:css|js|svg))"/g, `$1="$2?v=${appVersion}"`)
+}
+
 await rm(destination, { recursive: true, force: true })
 await mkdir(destination, { recursive: true })
 await cp(source, destination, { recursive: true })
@@ -98,7 +106,10 @@ await cp(source, destination, { recursive: true })
 const homePath = resolve(destination, 'index.html')
 const statsPath = resolve(destination, 'stats/index.html')
 
-await writeFile(homePath, addHomeSeo(await readFile(homePath, 'utf8')))
-await writeFile(statsPath, addStatsRobotsMeta(await readFile(statsPath, 'utf8')))
+const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
+const statsHtml = addReleaseVersion(addStatsRobotsMeta(await readFile(statsPath, 'utf8')))
 
-console.log('Built static site in dist/')
+await writeFile(homePath, homeHtml)
+await writeFile(statsPath, statsHtml)
+
+console.log(`Built static site in dist/ (v${appVersion})`)

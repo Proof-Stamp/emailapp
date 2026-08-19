@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { test, expect } from '@playwright/test'
 
 const CANONICAL = 'https://email.proofstamp.org/'
+const { version: APP_VERSION } = JSON.parse(readFileSync(resolve(import.meta.dirname, '../package.json'), 'utf8'))
 
-test.describe('technical SEO', () => {
+test.describe('technical SEO and release metadata', () => {
   test('homepage exposes canonical, social and ProofStamp entity metadata', async ({ page }) => {
     await page.goto('/')
 
@@ -25,6 +28,18 @@ test.describe('technical SEO', () => {
     expect(app.url).toBe(CANONICAL)
     expect(app.publisher['@id']).toBe('https://proofstamp.org/#organization')
     expect(app.isAccessibleForFree).toBe(true)
+  })
+
+  test('build exposes the current version and cache-busts static entry assets', async ({ page }) => {
+    await page.goto('/')
+
+    await expect(page.locator('.site-footer > span')).toHaveText(`ProofStamp · v${APP_VERSION}`)
+    await expect(page.locator('script[src^="/app.js"]')).toHaveAttribute('src', `/app.js?v=${APP_VERSION}`)
+    await expect(page.locator('link[href^="/styles.css"]')).toHaveAttribute('href', `/styles.css?v=${APP_VERSION}`)
+
+    await page.goto('/stats')
+    await expect(page.locator('.site-footer > span')).toHaveText(`ProofStamp · v${APP_VERSION}`)
+    await expect(page.locator('script[src^="/stats.js"]')).toHaveAttribute('src', `/stats.js?v=${APP_VERSION}`)
   })
 
   test('sitemap contains only the canonical homepage and stats is noindex', async ({ page, request }) => {
