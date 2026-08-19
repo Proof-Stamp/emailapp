@@ -17,7 +17,11 @@ const contentTypes = {
 
 function safePath(pathname) {
   const decoded = decodeURIComponent(pathname)
-  const requested = decoded === '/' || decoded === '/verify' ? '/index.html' : decoded
+  const requested = decoded === '/' || decoded === '/verify'
+    ? '/index.html'
+    : decoded === '/stats'
+      ? '/stats.html'
+      : decoded
   const target = resolve(root, `.${requested}`)
   return target === root || target.startsWith(`${root}${sep}`) ? target : null
 }
