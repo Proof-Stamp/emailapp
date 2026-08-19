@@ -88,6 +88,7 @@ test('builds a standards-friendly mailto URL with a second mailbox and complete 
   assert.match(url.searchParams.get('body'), /I sent you a ProofStamp for Apartment condition before moving in\./)
   assert.match(url.searchParams.get('body'), /VERIFY THE FILE/)
   assert.match(url.searchParams.get('body'), /ABOUT THIS PROOFSTAMP/)
+  assert.match(url.searchParams.get('body'), /Free\. Private\. No registration\. Your file stays on your device\./)
   assert.match(url.searchParams.get('body'), /ProofStamp your own file →/)
   assert.match(url.searchParams.get('body'), /https:\/\/email\.proofstamp\.org\//)
 })
@@ -102,6 +103,7 @@ test('renders a concise, recipient-friendly text ProofStamp', () => {
   assert.match(text, /Created at: August 17, 2026 at 12:00 PM UTC/)
   assert.doesNotMatch(text, /Created on this device/)
   assert.match(text, /ABOUT THIS PROOFSTAMP/)
+  assert.match(text, /Free\. Private\. No registration\. Your file stays on your device\./)
   assert.match(text, /ProofStamp your own file →/)
 })
 
