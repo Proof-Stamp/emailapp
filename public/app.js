@@ -160,13 +160,12 @@ async function calculateHashes() {
       currentSetHash = await setFingerprint(currentFileProofs.map(({ hash }) => hash))
     }
 
-    const fingerprintLines = currentFileProofs.flatMap(({ file, hash }, index) => [
-      `${index + 1}. ${file.name}`,
-      hash,
-      ''
-    ])
-    if (currentSetHash) fingerprintLines.push('Set fingerprint', currentSetHash)
-    els.hashValue.textContent = fingerprintLines.join('\n').trim()
+    const fingerprintLines = currentFileProofs.map(
+      ({ file, hash }, index) => `${index + 1}. ${file.name}  ${hash}`
+    )
+    if (currentSetHash) fingerprintLines.push(`Set fingerprint  ${currentSetHash}`)
+    els.hashValue.textContent = fingerprintLines.join('\n')
+    els.hashValue.style.whiteSpace = 'pre-wrap'
 
     els.fileStage.hidden = true
     els.detailsStage.hidden = false
