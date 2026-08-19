@@ -5,6 +5,7 @@ import {
   RECEIPT_SCHEMA,
   createMailtoUrl,
   createReceipt,
+  formatReceiptDate,
   isValidEmail,
   parseReceiptJson,
   receiptToText
@@ -63,7 +64,14 @@ test('omits a private filename when requested', () => {
   assert.equal(privateReceipt.file_name, null)
 })
 
-test('builds a mailto URL with a second mailbox and complete ProofStamp', () => {
+test('formats the device timestamp for a human reader', () => {
+  assert.equal(
+    formatReceiptDate('2026-08-19T00:24:41.927Z'),
+    'August 19, 2026 at 12:24 AM UTC'
+  )
+})
+
+test('builds a standards-friendly mailto URL with a second mailbox and complete ProofStamp', () => {
   const mailto = createMailtoUrl({
     receipt,
     primaryEmail: 'person@example.com',
@@ -71,19 +79,26 @@ test('builds a mailto URL with a second mailbox and complete ProofStamp', () => 
   })
   assert.equal(mailto.includes('+'), false)
   assert.equal(mailto.includes('%20'), true)
+  assert.equal(mailto.includes('%0D%0A'), true)
   const url = new URL(mailto)
   assert.equal(url.protocol, 'mailto:')
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
   assert.match(url.searchParams.get('body'), new RegExp(receiptHash))
-  assert.match(url.searchParams.get('body'), /email received time records when the ProofStamp reached your inbox/)
+  assert.match(url.searchParams.get('body'), /VERIFY A FILE/)
+  assert.match(url.searchParams.get('body'), /Need to create your own\?/)
+  assert.match(url.searchParams.get('body'), /ProofStamp a file: https:\/\/email\.proofstamp\.org\//)
+  assert.match(url.searchParams.get('body'), /received time on this email records when this ProofStamp reached the inbox/)
 })
 
-test('renders a readable text ProofStamp', () => {
+test('renders a readable, recipient-friendly text ProofStamp', () => {
   const text = receiptToText(receipt)
-  assert.match(text, /Description: Apartment condition before moving in/)
+  assert.match(text, /I created a ProofStamp for: Apartment condition before moving in/)
+  assert.match(text, /VERIFY A FILE/)
   assert.match(text, /File size: 2.0 KB \(2048 bytes\)/)
-  assert.match(text, /File fingerprint \(SHA-256\): a{64}/)
+  assert.match(text, /SHA-256 fingerprint:\na{64}/)
+  assert.match(text, /Created on this device: August 17, 2026 at 12:00 PM UTC/)
+  assert.match(text, /Need to create your own\?/)
 })
 
 test('accepts valid email addresses and rejects invalid ones', () => {
