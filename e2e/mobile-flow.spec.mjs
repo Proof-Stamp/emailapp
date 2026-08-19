@@ -40,6 +40,44 @@ test.describe('mobile validation and stage navigation', () => {
     expect(await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual({ width: 390, height: 844 })
   })
 
+  test('adds files one at a time without replacing earlier selections', async ({ page }) => {
+    const secondPhoto = {
+      name: 'photo-2.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('proofstamp-mobile-test-photo-2')
+    }
+
+    await page.goto('/')
+    await page.locator('#file-input').setInputFiles(photo)
+    await expect(page.locator('#selected-files .selected-file')).toHaveCount(1)
+    await expect(page.locator('#selected-files')).toContainText('photo.jpg')
+    await expect(page.locator('#add-more-files')).toBeVisible()
+
+    await page.locator('#file-input').setInputFiles(secondPhoto)
+    await expect(page.locator('#selected-files .selected-file')).toHaveCount(2)
+    await expect(page.locator('#selected-files')).toContainText('photo.jpg')
+    await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
+    await expect(page.locator('#hash-file')).toHaveText('Create 2 file fingerprints')
+  })
+
+  test('adds verifier files one at a time without replacing earlier selections', async ({ page }) => {
+    const secondPhoto = {
+      name: 'verify-2.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('proofstamp-verify-photo-2')
+    }
+
+    await page.goto('/verify')
+    await page.locator('#verify-file').setInputFiles(photo)
+    await expect(page.locator('#verify-selected-files .selected-file')).toHaveCount(1)
+    await expect(page.locator('#add-more-verify-files')).toBeVisible()
+
+    await page.locator('#verify-file').setInputFiles(secondPhoto)
+    await expect(page.locator('#verify-selected-files .selected-file')).toHaveCount(2)
+    await expect(page.locator('#verify-selected-files')).toContainText('photo.jpg')
+    await expect(page.locator('#verify-selected-files')).toContainText('verify-2.jpg')
+  })
+
   test('empty description moves focus and viewport to the description field', async ({ page }) => {
     await chooseAndHash(page)
     await page.locator('#primary-email').fill('person@example.com')
@@ -63,20 +101,31 @@ test.describe('mobile validation and stage navigation', () => {
     await expectFocused(page, field)
   })
 
-  test('invalid and duplicate CC errors stay attached to the CC field', async ({ page }) => {
+  test('keeps the optional second email hidden until requested and validates it in place', async ({ page }) => {
     await chooseAndHash(page)
     await completeRequiredFields(page)
 
     const cc = page.locator('#second-email')
+    await expect(page.locator('#second-email-field')).toBeHidden()
+    await expect(page.locator('#add-second-email')).toBeVisible()
+    await page.locator('#add-second-email').click()
+    await expect(page.locator('#second-email-field')).toBeVisible()
+    await expectFocused(page, cc)
+
     await cc.fill('bad-cc')
     await page.locator('button[type="submit"]').click()
-    await expect(page.locator('#second-email-error')).toContainText('valid CC email')
+    await expect(page.locator('#second-email-error')).toContainText('valid second email')
     await expectFocused(page, cc)
 
     await cc.fill('person@example.com')
     await page.locator('button[type="submit"]').click()
-    await expect(page.locator('#second-email-error')).toHaveText('Use a different address for CC.')
+    await expect(page.locator('#second-email-error')).toHaveText('Use a different address for the second email.')
     await expectFocused(page, cc)
+
+    await page.locator('#remove-second-email').click()
+    await expect(page.locator('#second-email-field')).toBeHidden()
+    await expect(cc).toHaveValue('')
+    await expectFocused(page, page.locator('#add-second-email'))
   })
 
   test('moves from hashing to context, then to the ready state, then back to step 1', async ({ page }) => {
@@ -176,7 +225,9 @@ test.describe('mobile validation and stage navigation', () => {
     await page.locator('button[type="submit"]').click()
 
     await expect.poll(() => metrics.some((metric) => metric.event === 'proof_created')).toBe(true)
-    expect(metrics.find((metric) => metric.event === 'proof_created')).toEqual({ event: 'proof_created', fileCount: 1 })
+    const createdMetric = metrics.find((metric) => metric.event === 'proof_created')
+    expect(createdMetric).toEqual(expect.objectContaining({ event: 'proof_created', fileCount: 1 }))
+    expect(createdMetric.eventId).toEqual(expect.any(String))
 
     await page.evaluate(async () => {
       const { createMailtoUrl } = await import('/receipt.js')
