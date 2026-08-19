@@ -9,6 +9,6 @@ test('feedback follow-up uses the ProofStamp info inbox and warns against privat
 
   assert.match(feedback, /info@proofstamp\.org/)
   assert.match(feedback, /Please do not include private files, fingerprints, or email addresses\./)
-  assert.match(feedback, /feedback_yes/)
-  assert.match(feedback, /feedback_no/)
+  assert.match(feedback, /Did ProofStamp work as expected\?/)
+  assert.match(feedback, /trackFeedback/)
 })
