@@ -63,22 +63,21 @@ export function createReceipt({
 export function receiptToText(receipt) {
   const lines = [
     'PROOFSTAMP', '',
-    'I sent you a ProofStamp',
-    `For: ${receipt.description}`, '',
-    'This record lets you later check whether a file is identical to the one used to create this fingerprint.', '',
-    'VERIFY A FILE',
+    `I sent you a ProofStamp for ${receipt.description}.`, '',
+    'Use it to check later whether a file exactly matches the one I fingerprinted.', '',
+    'VERIFY THE FILE',
     receipt.verification_url, '',
-    'PROOFSTAMP DETAILS',
+    'DETAILS',
     ...(receipt.file_name ? [`Filename: ${receipt.file_name}`] : []),
-    `File size: ${formatBytes(receipt.file_size_bytes)} (${receipt.file_size_bytes} bytes)`,
+    `File size: ${formatBytes(receipt.file_size_bytes)}`,
     'SHA-256 fingerprint:',
     receipt.hash,
-    `Created on this device: ${formatReceiptDate(receipt.created_at_device)}`, '',
-    'Keep the original file. If its SHA-256 fingerprint matches this ProofStamp later, the file contents have not changed.', '',
-    'WHAT THIS DOES NOT PROVE',
-    'A ProofStamp does not prove when or where the file was originally created, who made it, whether it was edited before the ProofStamp, or whether its contents are true. The received time on this email records when this ProofStamp reached the inbox.', '',
-    'Need to create your own?',
-    `ProofStamp a file: ${CREATE_URL}`
+    `Created at: ${formatReceiptDate(receipt.created_at_device)}`, '',
+    'Keep the original file. A matching fingerprint later means the file has not changed.', '',
+    'ABOUT THIS PROOFSTAMP',
+    'A matching fingerprint confirms the file is unchanged. The email received time shows when this ProofStamp reached the inbox.', '',
+    'ProofStamp your own file →',
+    CREATE_URL
   ]
   return lines.join('\n')
 }
