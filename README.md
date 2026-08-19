@@ -1,6 +1,6 @@
 # ProofStamp for Important Files
 
-A privacy-first web app that creates SHA-256 fingerprints for one or several files in the browser and prepares one ProofStamp email.
+A privacy-first web app that creates SHA-256 fingerprints for one or more files in the browser and prepares one ProofStamp email.
 
 The files are never uploaded. The app has no registration, backend, analytics, or external service dependency.
 
@@ -8,12 +8,11 @@ The files are never uploaded. The app has no registration, backend, analytics, o
 
 - Hashes 1–10 photos, documents, or other files locally with SHA-256
 - Keeps an individual fingerprint for every file
-- Creates an additional set fingerprint when more than one file is selected
 - Requires one plain-language description for the ProofStamp
 - Sends the prepared email to the user or another recipient, with optional CC
 - Opens the user's email app with a complete human-readable ProofStamp
 - Downloads or copies the same portable plain-text ProofStamp
-- Verifies one file, several selected files, or the complete ProofStamp set
+- Verifies one file, several selected files, or all files in the ProofStamp
 - Explains the evidence value and important limitations
 
 ## Run locally
@@ -44,7 +43,7 @@ All hashing happens through the browser Web Crypto API. Email addresses are used
 
 A ProofStamp is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the ProofStamp, or whether its contents are true.
 
-See [docs/architecture.md](docs/architecture.md) for the ProofStamp format, set fingerprint, and verification model.
+See [docs/architecture.md](docs/architecture.md) for the ProofStamp format and verification model.
 
 ## Brand assets
 
