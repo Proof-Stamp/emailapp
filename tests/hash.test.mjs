@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { extractSha256, isSha256, sha256Bytes } from '../public/hash.js'
+import {
+  MAX_FILES_PER_PROOFSTAMP,
+  extractProofstampFileHashes,
+  extractSetSha256,
+  extractSha256,
+  isSha256,
+  setFingerprint,
+  sha256Bytes
+} from '../public/hash.js'
 import {
   RECEIPT_SCHEMA,
   createMailtoUrl,
@@ -12,6 +20,9 @@ import {
 } from '../public/receipt.js'
 
 const receiptHash = 'a'.repeat(64)
+const secondHash = 'b'.repeat(64)
+const thirdHash = 'c'.repeat(64)
+
 const receipt = createReceipt({
   hash: receiptHash,
   description: 'Apartment condition before moving in',
@@ -20,6 +31,19 @@ const receipt = createReceipt({
   fileSizeBytes: 2048,
   mediaType: 'image/jpeg',
   createdAtDevice: '2026-08-17T12:00:00.000Z'
+})
+
+const multiSetHash = await setFingerprint([receiptHash, secondHash, thirdHash])
+const multiReceipt = createReceipt({
+  description: 'Apartment condition before moving out',
+  includeFilename: true,
+  files: [
+    { hash: receiptHash, fileName: 'front.jpg', fileSizeBytes: 1024, mediaType: 'image/jpeg' },
+    { hash: secondHash, fileName: 'kitchen.jpg', fileSizeBytes: 2048, mediaType: 'image/jpeg' },
+    { hash: thirdHash, fileName: 'bedroom.jpg', fileSizeBytes: 3072, mediaType: 'image/jpeg' }
+  ],
+  setHash: multiSetHash,
+  createdAtDevice: '2026-08-19T16:24:00.000Z'
 })
 
 test('hashes exact bytes with SHA-256', async () => {
@@ -44,24 +68,55 @@ test('different bytes produce different fingerprints', async () => {
   assert.notEqual(first, second)
 })
 
-test('creates a portable ProofStamp without email addresses', () => {
+test('creates an order-independent fingerprint for a set of files', async () => {
+  const forward = await setFingerprint([receiptHash, secondHash, thirdHash])
+  const reverse = await setFingerprint([thirdHash, secondHash, receiptHash])
+  const different = await setFingerprint([receiptHash, secondHash])
+  assert.equal(forward, reverse)
+  assert.notEqual(forward, different)
+})
+
+test('creates a portable single-file ProofStamp without email addresses', () => {
   assert.equal(receipt.schema, RECEIPT_SCHEMA)
-  assert.equal(receipt.hash, receiptHash)
-  assert.equal(receipt.file_name, 'bedroom.jpg')
+  assert.equal(receipt.version, '2.0')
+  assert.equal(receipt.files.length, 1)
+  assert.equal(receipt.files[0].hash, receiptHash)
+  assert.equal(receipt.files[0].file_name, 'bedroom.jpg')
+  assert.equal(receipt.set_hash, null)
   assert.equal('primaryEmail' in receipt, false)
   assert.equal('secondEmail' in receipt, false)
 })
 
-test('omits a private filename when requested', () => {
+test('creates one ProofStamp for several files', () => {
+  assert.equal(multiReceipt.files.length, 3)
+  assert.equal(multiReceipt.files[1].file_name, 'kitchen.jpg')
+  assert.equal(multiReceipt.set_hash, multiSetHash)
+})
+
+test('omits private filenames from every file when requested', async () => {
+  const setHash = await setFingerprint([receiptHash, secondHash])
   const privateReceipt = createReceipt({
-    hash: receiptHash,
-    description: 'Private document',
-    fileName: 'medical-record.pdf',
+    description: 'Private records',
     includeFilename: false,
-    fileSizeBytes: 512,
-    mediaType: 'application/pdf'
+    files: [
+      { hash: receiptHash, fileName: 'medical-record-1.pdf', fileSizeBytes: 512, mediaType: 'application/pdf' },
+      { hash: secondHash, fileName: 'medical-record-2.pdf', fileSizeBytes: 1024, mediaType: 'application/pdf' }
+    ],
+    setHash
   })
-  assert.equal(privateReceipt.file_name, null)
+  assert.equal(privateReceipt.files[0].file_name, null)
+  assert.equal(privateReceipt.files[1].file_name, null)
+})
+
+test('limits a ProofStamp to ten files', async () => {
+  const files = Array.from({ length: MAX_FILES_PER_PROOFSTAMP + 1 }, (_, index) => ({
+    hash: index % 2 ? receiptHash : secondHash,
+    fileName: `file-${index}.jpg`,
+    fileSizeBytes: 100,
+    mediaType: 'image/jpeg'
+  }))
+  const setHash = await setFingerprint(files.map(({ hash }) => hash))
+  assert.throws(() => createReceipt({ description: 'Too many', files, setHash }), /Choose between 1 and 10 files/)
 })
 
 test('formats the device timestamp for a human reader', () => {
@@ -71,7 +126,7 @@ test('formats the device timestamp for a human reader', () => {
   )
 })
 
-test('builds a standards-friendly mailto URL with a second mailbox and complete ProofStamp', () => {
+test('builds a standards-friendly mailto URL with complete single-file ProofStamp', () => {
   const mailto = createMailtoUrl({
     receipt,
     primaryEmail: 'person@example.com',
@@ -85,26 +140,29 @@ test('builds a standards-friendly mailto URL with a second mailbox and complete 
   assert.equal(decodeURIComponent(url.pathname), 'person@example.com')
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
   assert.match(url.searchParams.get('body'), new RegExp(receiptHash))
-  assert.match(url.searchParams.get('body'), /I sent you a ProofStamp for Apartment condition before moving in\./)
   assert.match(url.searchParams.get('body'), /VERIFY THE FILE/)
-  assert.match(url.searchParams.get('body'), /ABOUT THIS PROOFSTAMP/)
   assert.match(url.searchParams.get('body'), /Free\. Private\. No registration\. Your file stays on your device\./)
   assert.match(url.searchParams.get('body'), /ProofStamp your own file →/)
-  assert.match(url.searchParams.get('body'), /https:\/\/email\.proofstamp\.org\//)
 })
 
-test('renders a concise, recipient-friendly text ProofStamp', () => {
-  const text = receiptToText(receipt)
-  assert.match(text, /I sent you a ProofStamp for Apartment condition before moving in\./)
-  assert.match(text, /VERIFY THE FILE/)
-  assert.match(text, /File size: 2\.0 KB/)
-  assert.doesNotMatch(text, /2048 bytes/)
-  assert.match(text, /SHA-256 fingerprint:\na{64}/)
-  assert.match(text, /Created at: August 17, 2026 at 12:00 PM UTC/)
+test('renders a concise multi-file ProofStamp email', () => {
+  const text = receiptToText(multiReceipt)
+  assert.match(text, /3 files were fingerprinted/)
+  assert.match(text, /VERIFY THE FILES/)
+  assert.match(text, /1\. front\.jpg · 1\.0 KB/)
+  assert.match(text, /2\. kitchen\.jpg · 2\.0 KB/)
+  assert.match(text, /3\. bedroom\.jpg · 3\.0 KB/)
+  assert.match(text, new RegExp(`Set fingerprint \\(SHA-256\\):\\n${multiSetHash}`))
+  assert.match(text, /Created at: August 19, 2026 at 4:24 PM UTC/)
+  assert.match(text, /Free\. Private\. No registration\. Your files stay on your device\./)
+  assert.match(text, /ProofStamp your own files →/)
   assert.doesNotMatch(text, /Created on this device/)
-  assert.match(text, /ABOUT THIS PROOFSTAMP/)
-  assert.match(text, /Free\. Private\. No registration\. Your file stays on your device\./)
-  assert.match(text, /ProofStamp your own file →/)
+})
+
+test('extracts file fingerprints without confusing the set fingerprint', () => {
+  const text = receiptToText(multiReceipt)
+  assert.deepEqual(extractProofstampFileHashes(text), [receiptHash, secondHash, thirdHash])
+  assert.equal(extractSetSha256(text), multiSetHash)
 })
 
 test('accepts valid email addresses and rejects invalid ones', () => {
@@ -112,8 +170,22 @@ test('accepts valid email addresses and rejects invalid ones', () => {
   assert.equal(isValidEmail('not-an-email'), false)
 })
 
-test('loads only valid ProofStamp JSON receipts', () => {
-  assert.equal(parseReceiptJson(JSON.stringify(receipt)).hash, receiptHash)
+test('loads current multi-file and legacy single-file JSON receipts', () => {
+  const parsedMulti = parseReceiptJson(JSON.stringify(multiReceipt))
+  assert.equal(parsedMulti.files.length, 3)
+  assert.equal(parsedMulti.set_hash, multiSetHash)
+
+  const legacy = {
+    schema: RECEIPT_SCHEMA,
+    version: '1.0',
+    hash_algorithm: 'SHA-256',
+    hash: receiptHash,
+    description: 'Legacy file',
+    file_name: 'legacy.jpg',
+    file_size_bytes: 500,
+    media_type: 'image/jpeg'
+  }
+  assert.equal(parseReceiptJson(JSON.stringify(legacy)).hash, receiptHash)
   assert.throws(() => parseReceiptJson(JSON.stringify({ hash: receiptHash })), /Invalid ProofStamp file/)
   assert.throws(() => parseReceiptJson('{not json'))
 })
