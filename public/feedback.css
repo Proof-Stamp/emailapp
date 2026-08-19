@@ -15,6 +15,10 @@
   margin-top: .7rem;
 }
 
+.email-feedback-actions[hidden] {
+  display: none;
+}
+
 .email-feedback-actions .small-button[aria-pressed="true"] {
   border-color: var(--green-dark);
   color: var(--green-dark);
