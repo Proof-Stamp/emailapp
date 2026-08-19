@@ -2,6 +2,7 @@ const METRICS_ENDPOINT = '/api/metrics'
 const SESSION_PREFIX = 'proofstamp.metric.'
 const createdReceiptKeys = new Set()
 const openedReceiptKeys = new Set()
+const feedbackReceiptKeys = new Set()
 
 function canTrack() {
   return typeof window !== 'undefined' && typeof fetch === 'function'
@@ -58,4 +59,12 @@ export function trackEmailAppOpened(receipt) {
   const key = receiptKey(receipt)
   if (alreadyTracked('opened', key, openedReceiptKeys)) return
   sendMetric({ event: 'email_opened' })
+}
+
+export function trackFeedback(receipt, response) {
+  if (response !== 'yes' && response !== 'no') return false
+  const key = receiptKey(receipt)
+  if (alreadyTracked('feedback', key, feedbackReceiptKeys)) return false
+  sendMetric({ event: response === 'yes' ? 'feedback_yes' : 'feedback_no' })
+  return true
 }
