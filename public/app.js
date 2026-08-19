@@ -26,9 +26,81 @@ let selectedVerifyFiles = []
 let currentFileProofs = []
 let currentReceipt = null
 
-function showAlert(element, message) {
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+function moveTo(element, { focus = false, block = 'center' } = {}) {
+  if (!element) return
+  requestAnimationFrame(() => {
+    if (focus) {
+      const naturallyFocusable = element.matches('a, button, input, textarea, select, [tabindex]')
+      if (!naturallyFocusable) element.setAttribute('tabindex', '-1')
+      element.focus({ preventScroll: true })
+    }
+    element.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block
+    })
+  })
+}
+
+function showAlert(element, message, { move = false } = {}) {
   element.textContent = message
   element.hidden = !message
+  if (message && move) moveTo(element, { block: 'center' })
+}
+
+function showToast(message) {
+  document.querySelector('[data-proofstamp-toast]')?.remove()
+  const toast = document.createElement('div')
+  toast.dataset.proofstampToast = 'true'
+  toast.setAttribute('role', 'alert')
+  toast.textContent = message
+  Object.assign(toast.style, {
+    position: 'fixed',
+    left: '50%',
+    bottom: '1rem',
+    zIndex: '1000',
+    maxWidth: 'calc(100% - 2rem)',
+    padding: '.8rem 1rem',
+    borderRadius: '.7rem',
+    background: 'var(--navy)',
+    color: 'white',
+    fontWeight: '700',
+    fontSize: '.85rem',
+    boxShadow: '0 12px 32px rgba(7, 27, 44, .22)',
+    transform: 'translateX(-50%)'
+  })
+  document.body.append(toast)
+  setTimeout(() => toast.remove(), 4500)
+}
+
+function clearFieldError(field) {
+  if (!field) return
+  document.getElementById(`${field.id}-error`)?.remove()
+  field.removeAttribute('aria-invalid')
+  field.removeAttribute('aria-errormessage')
+  field.style.borderColor = ''
+}
+
+function showFieldError(field, message) {
+  clearFieldError(field)
+  const error = document.createElement('small')
+  error.id = `${field.id}-error`
+  error.setAttribute('role', 'alert')
+  error.textContent = message
+  error.style.color = 'var(--danger)'
+  error.style.fontWeight = '700'
+  field.insertAdjacentElement('afterend', error)
+  field.setAttribute('aria-invalid', 'true')
+  field.setAttribute('aria-errormessage', error.id)
+  field.style.borderColor = 'var(--danger)'
+  moveTo(field, { focus: true, block: 'center' })
+}
+
+function clearCreateFieldErrors() {
+  ;[els.description, els.primaryEmail, els.secondEmail].forEach(clearFieldError)
 }
 
 function setStep(active) {
@@ -38,7 +110,14 @@ function setStep(active) {
   })
 }
 
-function switchTab(mode) {
+function focusPanel(mode) {
+  const target = mode === 'create'
+    ? els.createPanel.querySelector('#file-stage-title')
+    : els.verifyPanel.querySelector('.verify-intro h2')
+  moveTo(target, { focus: true, block: 'start' })
+}
+
+function switchTab(mode, { move = true } = {}) {
   const create = mode === 'create'
   els.createTab.classList.toggle('active', create)
   els.verifyTab.classList.toggle('active', !create)
@@ -47,20 +126,16 @@ function switchTab(mode) {
   els.createPanel.hidden = !create
   els.verifyPanel.hidden = create
   history.replaceState(null, '', create ? '/' : '/verify')
+  if (move) focusPanel(mode)
 }
 
-function validateFiles(files, alertElement) {
-  if (!files.length) return false
+function fileValidationMessage(files) {
+  if (!files.length) return ''
   if (files.length > MAX_FILES_PER_PROOFSTAMP) {
-    showAlert(alertElement, `Choose up to ${MAX_FILES_PER_PROOFSTAMP} files at a time.`)
-    return false
+    return `Choose up to ${MAX_FILES_PER_PROOFSTAMP} files at a time.`
   }
   const tooLarge = files.find((file) => file.size > MAX_FILE_SIZE_BYTES)
-  if (tooLarge) {
-    showAlert(alertElement, `${tooLarge.name} is larger than 50 MB.`)
-    return false
-  }
-  return true
+  return tooLarge ? `${tooLarge.name} is larger than 50 MB.` : ''
 }
 
 function makeFileRow(file, index, onRemove) {
@@ -101,7 +176,18 @@ function renderCreateFiles() {
 function acceptFiles(fileList) {
   showAlert(els.createAlert, '')
   const files = Array.from(fileList || [])
-  if (!validateFiles(files, els.createAlert)) return
+  if (!files.length) return
+
+  const validationMessage = fileValidationMessage(files)
+  if (validationMessage) {
+    const previous = selectedFiles.length
+      ? ` Your previous ${selectedFiles.length} ${selectedFiles.length === 1 ? 'file is' : 'files are'} still selected.`
+      : ''
+    els.fileInput.value = ''
+    showAlert(els.createAlert, `${validationMessage}${previous}`, { move: true })
+    return
+  }
+
   selectedFiles = files
   currentFileProofs = []
   currentReceipt = null
@@ -116,7 +202,7 @@ function removeCreateFile(index) {
   renderCreateFiles()
 }
 
-function resetCreate() {
+function resetCreate({ move = true } = {}) {
   selectedFiles = []
   currentFileProofs = []
   currentReceipt = null
@@ -130,14 +216,17 @@ function resetCreate() {
   els.receiptForm.reset()
   els.includeFilename.checked = true
   els.descriptionCount.textContent = '0 / 500'
+  clearCreateFieldErrors()
   showAlert(els.createAlert, '')
   setStep(1)
+  if (move) moveTo($('#file-stage-title'), { focus: true, block: 'start' })
 }
 
 async function calculateHashes() {
   if (!selectedFiles.length) return
   els.hashFile.disabled = true
   currentFileProofs = []
+  showAlert(els.createAlert, '')
 
   try {
     for (let index = 0; index < selectedFiles.length; index += 1) {
@@ -158,10 +247,10 @@ async function calculateHashes() {
     els.fileStage.hidden = true
     els.detailsStage.hidden = false
     setStep(2)
-    els.description.focus()
+    moveTo(els.description, { focus: true, block: 'center' })
   } catch {
     currentFileProofs = []
-    showAlert(els.createAlert, 'This browser could not read one of those files. Try choosing the files again.')
+    showAlert(els.createAlert, 'This browser could not read one of those files. Try choosing the files again.', { move: true })
   } finally {
     els.hashFile.disabled = false
     els.hashFile.textContent = selectedFiles.length === 1 ? 'Create file fingerprint' : `Create ${selectedFiles.length} file fingerprints`
@@ -172,14 +261,18 @@ function createReceipt() {
   const description = els.description.value.trim()
   const primaryEmail = els.primaryEmail.value.trim()
   const secondEmail = els.secondEmail.value.trim()
-  if (!description) return showAlert(els.createAlert, 'Add a short description so you can recognize these files later.')
-  if (!isValidEmail(primaryEmail)) return showAlert(els.createAlert, 'Enter a valid email address.')
-  if (secondEmail && !isValidEmail(secondEmail)) return showAlert(els.createAlert, 'Enter a valid CC email address or leave it blank.')
+  clearCreateFieldErrors()
+  showAlert(els.createAlert, '')
+
+  if (!description) return showFieldError(els.description, 'Add a short description so you can recognize these files later.')
+  if (!isValidEmail(primaryEmail)) return showFieldError(els.primaryEmail, 'Enter a valid email address.')
+  if (secondEmail && !isValidEmail(secondEmail)) return showFieldError(els.secondEmail, 'Enter a valid CC email address or leave it blank.')
   if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
-    return showAlert(els.createAlert, 'Use a different address for CC.')
+    return showFieldError(els.secondEmail, 'Use a different address for CC.')
   }
   if (!currentFileProofs.length || currentFileProofs.length !== selectedFiles.length) {
-    return showAlert(els.createAlert, 'Choose the files and create their fingerprints first.')
+    showAlert(els.createAlert, 'Choose the files and create their fingerprints first.', { move: true })
+    return
   }
 
   currentReceipt = buildReceipt({
@@ -194,10 +287,10 @@ function createReceipt() {
   })
   currentReceipt._delivery = { primaryEmail, secondEmail }
   renderReceipt()
-  showAlert(els.createAlert, '')
   els.detailsStage.hidden = true
   els.receiptStage.hidden = false
   setStep(3)
+  moveTo($('#receipt-stage-title'), { focus: true, block: 'start' })
 }
 
 function publicReceipt() {
@@ -241,7 +334,7 @@ async function copyText(text, button, label) {
     button.textContent = label
     setTimeout(() => { button.textContent = previous }, 1500)
   } catch {
-    showAlert(els.createAlert, 'Copying was blocked. Select the text and copy it manually.')
+    showToast('Copying was blocked. Select the text and copy it manually.')
   }
 }
 
@@ -265,7 +358,18 @@ function acceptVerifyFiles(fileList) {
   showAlert(els.verifyAlert, '')
   els.verifyResult.hidden = true
   const files = Array.from(fileList || [])
-  if (!validateFiles(files, els.verifyAlert)) return
+  if (!files.length) return
+
+  const validationMessage = fileValidationMessage(files)
+  if (validationMessage) {
+    const previous = selectedVerifyFiles.length
+      ? ` Your previous ${selectedVerifyFiles.length} ${selectedVerifyFiles.length === 1 ? 'file is' : 'files are'} still selected.`
+      : ''
+    els.verifyFile.value = ''
+    showAlert(els.verifyAlert, `${validationMessage}${previous}`, { move: true })
+    return
+  }
+
   selectedVerifyFiles = files
   renderVerifyFiles()
 }
@@ -284,16 +388,21 @@ function resetVerifyFiles() {
   els.verifySelectedFiles.replaceChildren()
   els.verifySelectedFiles.hidden = true
   els.verifyResult.hidden = true
+  clearFieldError(els.expectedHash)
   showAlert(els.verifyAlert, '')
 }
 
 async function verify() {
   showAlert(els.verifyAlert, '')
+  clearFieldError(els.expectedHash)
   els.verifyResult.hidden = true
 
   const expectedHashes = extractProofstampFileHashes(els.expectedHash.value)
-  if (!selectedVerifyFiles.length) return showAlert(els.verifyAlert, 'Choose one or more files you want to check.')
-  if (!expectedHashes.length) return showAlert(els.verifyAlert, 'Paste a valid fingerprint or the full ProofStamp email.')
+  if (!selectedVerifyFiles.length) {
+    showAlert(els.verifyAlert, 'Choose one or more files you want to check.', { move: true })
+    return
+  }
+  if (!expectedHashes.length) return showFieldError(els.expectedHash, 'Paste a valid fingerprint or the full ProofStamp email.')
 
   els.verifyButton.disabled = true
   const actual = []
@@ -341,8 +450,9 @@ async function verify() {
     els.actualHash.textContent = results
       .map(({ file, hash, match }) => `${match ? '✓' : '×'} ${file.name}\n${hash}`)
       .join('\n\n')
+    moveTo(els.verifyResultTitle, { focus: true, block: 'center' })
   } catch {
-    showAlert(els.verifyAlert, 'This browser could not read one of those files. Try choosing the files again.')
+    showAlert(els.verifyAlert, 'This browser could not read one of those files. Try choosing the files again.', { move: true })
   } finally {
     els.verifyButton.disabled = false
     els.verifyButton.textContent = 'Check files'
@@ -360,15 +470,21 @@ els.dropZone.addEventListener('drop', (event) => {
   acceptFiles(event.dataTransfer.files)
 })
 els.hashFile.addEventListener('click', calculateHashes)
-els.startOver.addEventListener('click', resetCreate)
-els.description.addEventListener('input', () => { els.descriptionCount.textContent = `${els.description.value.length} / 500` })
+els.startOver.addEventListener('click', () => resetCreate({ move: true }))
+els.description.addEventListener('input', () => {
+  els.descriptionCount.textContent = `${els.description.value.length} / 500`
+  clearFieldError(els.description)
+})
+els.primaryEmail.addEventListener('input', () => clearFieldError(els.primaryEmail))
+els.secondEmail.addEventListener('input', () => clearFieldError(els.secondEmail))
 els.copyHash.addEventListener('click', () => copyText(els.hashValue.textContent, els.copyHash, 'Copied'))
 els.receiptForm.addEventListener('submit', (event) => { event.preventDefault(); createReceipt() })
 els.openEmail.addEventListener('click', openEmail)
 els.copyReceipt.addEventListener('click', () => copyText(receiptToText(publicReceipt()), els.copyReceipt, 'Copied'))
 els.downloadReceipt.addEventListener('click', downloadReceipt)
-els.createAnother.addEventListener('click', resetCreate)
+els.createAnother.addEventListener('click', () => resetCreate({ move: true }))
 els.verifyFile.addEventListener('change', () => acceptVerifyFiles(els.verifyFile.files))
+els.expectedHash.addEventListener('input', () => clearFieldError(els.expectedHash))
 els.verifyDropZone.addEventListener('dragover', (event) => { event.preventDefault(); els.verifyDropZone.classList.add('dragging') })
 els.verifyDropZone.addEventListener('dragleave', () => els.verifyDropZone.classList.remove('dragging'))
 els.verifyDropZone.addEventListener('drop', (event) => {
@@ -378,4 +494,6 @@ els.verifyDropZone.addEventListener('drop', (event) => {
 })
 els.verifyButton.addEventListener('click', verify)
 
-if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify')
+if (location.pathname.startsWith('/verify') || location.hash === '#verify') {
+  switchTab('verify', { move: true })
+}
