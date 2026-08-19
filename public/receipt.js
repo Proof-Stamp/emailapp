@@ -76,6 +76,7 @@ export function receiptToText(receipt) {
     'Keep the original file. A matching fingerprint later means the file has not changed.', '',
     'ABOUT THIS PROOFSTAMP',
     'A matching fingerprint confirms the file is unchanged. The email received time shows when this ProofStamp reached the inbox.', '',
+    'Free. Private. No registration. Your file stays on your device.', '',
     'ProofStamp your own file →',
     CREATE_URL
   ]
