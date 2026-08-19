@@ -1,8 +1,8 @@
-import { isSha256 } from './hash.js'
+import { MAX_FILES_PER_PROOFSTAMP, isSha256 } from './hash.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
-export const RECEIPT_VERSION = '1.0'
-export const APP_VERSION = '0.2.0'
+export const RECEIPT_VERSION = '2.0'
+export const APP_VERSION = '0.3.0'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
@@ -33,27 +33,65 @@ export function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }
 
+function normalizeFile(file, includeFilename = true) {
+  const hash = String(file?.hash || '').toLowerCase()
+  if (!isSha256(hash)) throw new TypeError('Every file needs a valid SHA-256 fingerprint.')
+
+  return {
+    hash,
+    file_name: includeFilename ? (file.fileName ?? file.file_name ?? null) : null,
+    file_size_bytes: Number(file.fileSizeBytes ?? file.file_size_bytes ?? 0),
+    media_type: file.mediaType ?? file.media_type ?? 'application/octet-stream'
+  }
+}
+
+function receiptFiles(receipt) {
+  if (Array.isArray(receipt?.files) && receipt.files.length) return receipt.files
+  if (isSha256(String(receipt?.hash || ''))) {
+    return [{
+      hash: receipt.hash.toLowerCase(),
+      file_name: receipt.file_name ?? null,
+      file_size_bytes: Number(receipt.file_size_bytes || 0),
+      media_type: receipt.media_type || 'application/octet-stream'
+    }]
+  }
+  return []
+}
+
 export function createReceipt({
   hash,
   description,
   fileName,
-  includeFilename,
+  includeFilename = true,
   fileSizeBytes,
   mediaType,
+  files,
+  setHash = '',
   createdAtDevice = new Date().toISOString()
 }) {
-  if (!isSha256(hash)) throw new TypeError('A valid SHA-256 fingerprint is required.')
   if (!description.trim()) throw new TypeError('A description is required.')
+
+  const sourceFiles = Array.isArray(files) && files.length
+    ? files
+    : [{ hash, fileName, fileSizeBytes, mediaType }]
+
+  if (!sourceFiles.length || sourceFiles.length > MAX_FILES_PER_PROOFSTAMP) {
+    throw new TypeError(`Choose between 1 and ${MAX_FILES_PER_PROOFSTAMP} files.`)
+  }
+
+  const normalizedFiles = sourceFiles.map((file) => normalizeFile(file, includeFilename))
+  const normalizedSetHash = normalizedFiles.length > 1 ? String(setHash).toLowerCase() : ''
+  if (normalizedFiles.length > 1 && !isSha256(normalizedSetHash)) {
+    throw new TypeError('A valid set fingerprint is required for multiple files.')
+  }
 
   return {
     schema: RECEIPT_SCHEMA,
     version: RECEIPT_VERSION,
     hash_algorithm: 'SHA-256',
-    hash: hash.toLowerCase(),
     description: description.trim(),
-    file_name: includeFilename ? fileName : null,
-    file_size_bytes: fileSizeBytes,
-    media_type: mediaType || 'application/octet-stream',
+    files: normalizedFiles,
+    set_hash: normalizedSetHash || null,
     created_at_device: createdAtDevice,
     verification_url: VERIFICATION_URL,
     app_version: APP_VERSION
@@ -61,25 +99,46 @@ export function createReceipt({
 }
 
 export function receiptToText(receipt) {
+  const files = receiptFiles(receipt)
+  if (!files.length) throw new TypeError('The ProofStamp does not contain any valid files.')
+
+  const plural = files.length > 1
   const lines = [
     'PROOFSTAMP', '',
     `I sent you a ProofStamp for ${receipt.description}.`, '',
-    'Use it to check later whether a file exactly matches the one I fingerprinted.', '',
-    'VERIFY THE FILE',
-    receipt.verification_url, '',
-    'DETAILS',
-    ...(receipt.file_name ? [`Filename: ${receipt.file_name}`] : []),
-    `File size: ${formatBytes(receipt.file_size_bytes)}`,
-    'SHA-256 fingerprint:',
-    receipt.hash,
-    `Created at: ${formatReceiptDate(receipt.created_at_device)}`, '',
-    'Keep the original file. A matching fingerprint later means the file has not changed.', '',
-    'ABOUT THIS PROOFSTAMP',
-    'A matching fingerprint confirms the file is unchanged. The email received time shows when this ProofStamp reached the inbox.', '',
-    'Free. Private. No registration. Your file stays on your device.', '',
-    'ProofStamp your own file →',
-    CREATE_URL
+    plural
+      ? `${files.length} files were fingerprinted. Use this to check whether they match later.`
+      : 'Use it to check later whether a file exactly matches the one I fingerprinted.', '',
+    plural ? 'VERIFY THE FILES' : 'VERIFY THE FILE',
+    receipt.verification_url || VERIFICATION_URL, '',
+    'DETAILS'
   ]
+
+  files.forEach((file, index) => {
+    const label = file.file_name || `File ${index + 1}`
+    lines.push(`${index + 1}. ${label} · ${formatBytes(file.file_size_bytes)}`)
+    lines.push(`SHA-256: ${file.hash}`)
+    if (index < files.length - 1) lines.push('')
+  })
+
+  if (plural && isSha256(String(receipt.set_hash || ''))) {
+    lines.push('', 'Set fingerprint (SHA-256):', receipt.set_hash)
+  }
+
+  lines.push(
+    `Created at: ${formatReceiptDate(receipt.created_at_device)}`, '',
+    plural
+      ? 'Keep the original files. Matching fingerprints later mean the files have not changed.'
+      : 'Keep the original file. A matching fingerprint later means the file has not changed.', '',
+    'ABOUT THIS PROOFSTAMP',
+    plural
+      ? 'Matching fingerprints confirm the files are unchanged. The email received time shows when this ProofStamp reached the inbox.'
+      : 'A matching fingerprint confirms the file is unchanged. The email received time shows when this ProofStamp reached the inbox.', '',
+    `Free. Private. No registration. Your ${plural ? 'files stay' : 'file stays'} on your device.`, '',
+    `ProofStamp your own ${plural ? 'files' : 'file'} →`,
+    CREATE_URL
+  )
+
   return lines.join('\n')
 }
 
@@ -103,12 +162,23 @@ export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
 
 export function parseReceiptJson(text) {
   const parsed = JSON.parse(text)
-  if (
-    parsed?.schema !== RECEIPT_SCHEMA ||
-    parsed?.hash_algorithm !== 'SHA-256' ||
-    !isSha256(String(parsed?.hash || ''))
-  ) {
+  if (parsed?.schema !== RECEIPT_SCHEMA || parsed?.hash_algorithm !== 'SHA-256') {
     throw new TypeError('Invalid ProofStamp file.')
   }
+
+  if (Array.isArray(parsed.files) && parsed.files.length) {
+    if (parsed.files.length > MAX_FILES_PER_PROOFSTAMP) throw new TypeError('Invalid ProofStamp file.')
+    const files = parsed.files.map((file) => normalizeFile(file, true))
+    if (files.length > 1 && !isSha256(String(parsed.set_hash || ''))) {
+      throw new TypeError('Invalid ProofStamp file.')
+    }
+    return {
+      ...parsed,
+      files,
+      set_hash: parsed.set_hash ? String(parsed.set_hash).toLowerCase() : null
+    }
+  }
+
+  if (!isSha256(String(parsed?.hash || ''))) throw new TypeError('Invalid ProofStamp file.')
   return { ...parsed, hash: parsed.hash.toLowerCase() }
 }
