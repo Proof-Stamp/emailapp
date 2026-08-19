@@ -9,14 +9,15 @@ import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEma
 const $ = (selector) => document.querySelector(selector)
 const els = {
   createTab: $('#create-tab'), verifyTab: $('#verify-tab'), createPanel: $('#create-panel'), verifyPanel: $('#verify-panel'),
-  createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'), hashFile: $('#hash-file'),
+  createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'), addMoreFiles: $('#add-more-files'), hashFile: $('#hash-file'),
   fileStage: $('#file-stage'), detailsStage: $('#details-stage'), receiptStage: $('#receipt-stage'), startOver: $('#start-over'),
   hashValue: $('#hash-value'), copyHash: $('#copy-hash'), receiptForm: $('#receipt-form'), description: $('#description'),
-  descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'),
+  descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'), secondEmailField: $('#second-email-field'),
+  addSecondEmail: $('#add-second-email'), removeSecondEmail: $('#remove-second-email'),
   includeFilename: $('#include-filename'), receiptSummary: $('#receipt-summary'), providerCount: $('#receipt-provider-count'),
   openEmail: $('#open-email'), copyReceipt: $('#copy-receipt'), downloadReceipt: $('#download-receipt'), createAnother: $('#create-another'),
   verifyAlert: $('#verify-alert'), expectedHash: $('#expected-hash'), verifyFile: $('#verify-file'), verifyDropZone: $('#verify-drop-zone'),
-  verifySelectedFiles: $('#verify-selected-files'), verifyButton: $('#verify-button'), verifyResult: $('#verify-result'),
+  verifySelectedFiles: $('#verify-selected-files'), addMoreVerifyFiles: $('#add-more-verify-files'), verifyButton: $('#verify-button'), verifyResult: $('#verify-result'),
   verifyResultIcon: $('#verify-result-icon'), verifyResultTitle: $('#verify-result-title'), verifyResultCopy: $('#verify-result-copy'),
   actualHash: $('#actual-hash')
 }
@@ -103,6 +104,16 @@ function clearCreateFieldErrors() {
   ;[els.description, els.primaryEmail, els.secondEmail].forEach(clearFieldError)
 }
 
+function setSecondEmailVisible(visible, { focus = false } = {}) {
+  els.secondEmailField.hidden = !visible
+  els.addSecondEmail.hidden = visible
+  if (!visible) {
+    clearFieldError(els.secondEmail)
+    els.secondEmail.value = ''
+  }
+  if (visible && focus) moveTo(els.secondEmail, { focus: true, block: 'center' })
+}
+
 function setStep(active) {
   document.querySelectorAll('.step').forEach((step, index) => {
     step.classList.toggle('active', index + 1 === active)
@@ -138,6 +149,57 @@ function fileValidationMessage(files) {
   return tooLarge ? `${tooLarge.name} is larger than 50 MB.` : ''
 }
 
+function fileIdentity(file) {
+  return `${file.name}\u0000${file.size}\u0000${file.type || ''}\u0000${file.lastModified || 0}`
+}
+
+function mergeFileSelection(current, fileList) {
+  const incoming = Array.from(fileList || [])
+  if (!incoming.length) return { files: current, added: 0, duplicates: 0, error: '' }
+
+  const validationMessage = fileValidationMessage(incoming)
+  if (validationMessage) return { files: current, added: 0, duplicates: 0, error: validationMessage }
+
+  const seen = new Set(current.map(fileIdentity))
+  const additions = []
+  let duplicates = 0
+
+  incoming.forEach((file) => {
+    const key = fileIdentity(file)
+    if (seen.has(key)) {
+      duplicates += 1
+      return
+    }
+    seen.add(key)
+    additions.push(file)
+  })
+
+  const remaining = MAX_FILES_PER_PROOFSTAMP - current.length
+  if (additions.length > remaining) {
+    const error = remaining > 0
+      ? `You can add ${remaining} more ${remaining === 1 ? 'file' : 'files'} to this ProofStamp.`
+      : `You already have ${MAX_FILES_PER_PROOFSTAMP} files selected.`
+    return { files: current, added: 0, duplicates, error }
+  }
+
+  return {
+    files: [...current, ...additions],
+    added: additions.length,
+    duplicates,
+    error: ''
+  }
+}
+
+function previousSelectionCopy(files) {
+  if (!files.length) return ''
+  return ` Your previous ${files.length} ${files.length === 1 ? 'file is' : 'files are'} still selected.`
+}
+
+function duplicateSelectionCopy(count) {
+  if (!count) return ''
+  return `${count === 1 ? 'That file is' : `${count} files are`} already selected, so ${count === 1 ? 'it was' : 'they were'} not added again.`
+}
+
 function makeFileRow(file, index, onRemove) {
   const row = document.createElement('div')
   row.className = 'selected-file'
@@ -168,30 +230,31 @@ function makeFileRow(file, index, onRemove) {
 
 function renderCreateFiles() {
   els.selectedFiles.replaceChildren(...selectedFiles.map((file, index) => makeFileRow(file, index, removeCreateFile)))
-  els.selectedFiles.hidden = selectedFiles.length === 0
-  els.hashFile.hidden = selectedFiles.length === 0
+  const hasFiles = selectedFiles.length > 0
+  els.selectedFiles.hidden = !hasFiles
+  els.dropZone.hidden = hasFiles
+  els.addMoreFiles.hidden = !hasFiles || selectedFiles.length >= MAX_FILES_PER_PROOFSTAMP
+  els.hashFile.hidden = !hasFiles
   els.hashFile.textContent = selectedFiles.length === 1 ? 'Create file fingerprint' : `Create ${selectedFiles.length} file fingerprints`
 }
 
 function acceptFiles(fileList) {
   showAlert(els.createAlert, '')
-  const files = Array.from(fileList || [])
-  if (!files.length) return
+  const result = mergeFileSelection(selectedFiles, fileList)
+  els.fileInput.value = ''
 
-  const validationMessage = fileValidationMessage(files)
-  if (validationMessage) {
-    const previous = selectedFiles.length
-      ? ` Your previous ${selectedFiles.length} ${selectedFiles.length === 1 ? 'file is' : 'files are'} still selected.`
-      : ''
-    els.fileInput.value = ''
-    showAlert(els.createAlert, `${validationMessage}${previous}`, { move: true })
+  if (result.error) {
+    showAlert(els.createAlert, `${result.error}${previousSelectionCopy(selectedFiles)}`, { move: true })
     return
   }
 
-  selectedFiles = files
-  currentFileProofs = []
-  currentReceipt = null
+  if (result.added) {
+    selectedFiles = result.files
+    currentFileProofs = []
+    currentReceipt = null
+  }
   renderCreateFiles()
+  if (result.duplicates) showAlert(els.createAlert, duplicateSelectionCopy(result.duplicates))
 }
 
 function removeCreateFile(index) {
@@ -209,11 +272,14 @@ function resetCreate({ move = true } = {}) {
   els.fileInput.value = ''
   els.selectedFiles.replaceChildren()
   els.selectedFiles.hidden = true
+  els.dropZone.hidden = false
+  els.addMoreFiles.hidden = true
   els.hashFile.hidden = true
   els.fileStage.hidden = false
   els.detailsStage.hidden = true
   els.receiptStage.hidden = true
   els.receiptForm.reset()
+  setSecondEmailVisible(false)
   els.includeFilename.checked = true
   els.descriptionCount.textContent = '0 / 500'
   clearCreateFieldErrors()
@@ -266,9 +332,9 @@ function createReceipt() {
 
   if (!description) return showFieldError(els.description, 'Add a short description so you can recognize these files later.')
   if (!isValidEmail(primaryEmail)) return showFieldError(els.primaryEmail, 'Enter a valid email address.')
-  if (secondEmail && !isValidEmail(secondEmail)) return showFieldError(els.secondEmail, 'Enter a valid CC email address or leave it blank.')
+  if (secondEmail && !isValidEmail(secondEmail)) return showFieldError(els.secondEmail, 'Enter a valid second email address or remove it.')
   if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
-    return showFieldError(els.secondEmail, 'Use a different address for CC.')
+    return showFieldError(els.secondEmail, 'Use a different address for the second email.')
   }
   if (!currentFileProofs.length || currentFileProofs.length !== selectedFiles.length) {
     showAlert(els.createAlert, 'Choose the files and create their fingerprints first.', { move: true })
@@ -351,27 +417,26 @@ function downloadReceipt() {
 
 function renderVerifyFiles() {
   els.verifySelectedFiles.replaceChildren(...selectedVerifyFiles.map((file, index) => makeFileRow(file, index, removeVerifyFile)))
-  els.verifySelectedFiles.hidden = selectedVerifyFiles.length === 0
+  const hasFiles = selectedVerifyFiles.length > 0
+  els.verifySelectedFiles.hidden = !hasFiles
+  els.verifyDropZone.hidden = hasFiles
+  els.addMoreVerifyFiles.hidden = !hasFiles || selectedVerifyFiles.length >= MAX_FILES_PER_PROOFSTAMP
 }
 
 function acceptVerifyFiles(fileList) {
   showAlert(els.verifyAlert, '')
   els.verifyResult.hidden = true
-  const files = Array.from(fileList || [])
-  if (!files.length) return
+  const result = mergeFileSelection(selectedVerifyFiles, fileList)
+  els.verifyFile.value = ''
 
-  const validationMessage = fileValidationMessage(files)
-  if (validationMessage) {
-    const previous = selectedVerifyFiles.length
-      ? ` Your previous ${selectedVerifyFiles.length} ${selectedVerifyFiles.length === 1 ? 'file is' : 'files are'} still selected.`
-      : ''
-    els.verifyFile.value = ''
-    showAlert(els.verifyAlert, `${validationMessage}${previous}`, { move: true })
+  if (result.error) {
+    showAlert(els.verifyAlert, `${result.error}${previousSelectionCopy(selectedVerifyFiles)}`, { move: true })
     return
   }
 
-  selectedVerifyFiles = files
+  if (result.added) selectedVerifyFiles = result.files
   renderVerifyFiles()
+  if (result.duplicates) showAlert(els.verifyAlert, duplicateSelectionCopy(result.duplicates))
 }
 
 function removeVerifyFile(index) {
@@ -387,6 +452,8 @@ function resetVerifyFiles() {
   els.verifyFile.value = ''
   els.verifySelectedFiles.replaceChildren()
   els.verifySelectedFiles.hidden = true
+  els.verifyDropZone.hidden = false
+  els.addMoreVerifyFiles.hidden = true
   els.verifyResult.hidden = true
   clearFieldError(els.expectedHash)
   showAlert(els.verifyAlert, '')
@@ -476,6 +543,11 @@ els.description.addEventListener('input', () => {
   clearFieldError(els.description)
 })
 els.primaryEmail.addEventListener('input', () => clearFieldError(els.primaryEmail))
+els.addSecondEmail.addEventListener('click', () => setSecondEmailVisible(true, { focus: true }))
+els.removeSecondEmail.addEventListener('click', () => {
+  setSecondEmailVisible(false)
+  moveTo(els.addSecondEmail, { focus: true, block: 'center' })
+})
 els.secondEmail.addEventListener('input', () => clearFieldError(els.secondEmail))
 els.copyHash.addEventListener('click', () => copyText(els.hashValue.textContent, els.copyHash, 'Copied'))
 els.receiptForm.addEventListener('submit', (event) => { event.preventDefault(); createReceipt() })
