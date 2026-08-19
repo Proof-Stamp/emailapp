@@ -95,7 +95,7 @@ function addStatsRobotsMeta(html) {
 
 function addReleaseVersion(html) {
   return html
-    .replace('<span>ProofStamp</span>', `<span>ProofStamp · v${appVersion}</span>`)
+    .replace(/<span>ProofStamp(?: · v[0-9.]+)?<\/span>/, `<span>ProofStamp · v${appVersion}</span>`)
     .replace(/(href|src)="(\/[^"?]+\.(?:css|js|svg))"/g, `$1="$2?v=${appVersion}"`)
 }
 
