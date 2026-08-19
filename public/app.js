@@ -2,8 +2,6 @@ import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILES_PER_PROOFSTAMP,
   extractProofstampFileHashes,
-  extractSetSha256,
-  setFingerprint,
   sha256File
 } from './hash.js'
 import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEmail, receiptToText } from './receipt.js'
@@ -26,7 +24,6 @@ const els = {
 let selectedFiles = []
 let selectedVerifyFiles = []
 let currentFileProofs = []
-let currentSetHash = ''
 let currentReceipt = null
 
 function showAlert(element, message) {
@@ -107,7 +104,6 @@ function acceptFiles(fileList) {
   if (!validateFiles(files, els.createAlert)) return
   selectedFiles = files
   currentFileProofs = []
-  currentSetHash = ''
   currentReceipt = null
   renderCreateFiles()
 }
@@ -115,7 +111,6 @@ function acceptFiles(fileList) {
 function removeCreateFile(index) {
   selectedFiles.splice(index, 1)
   currentFileProofs = []
-  currentSetHash = ''
   currentReceipt = null
   els.fileInput.value = ''
   renderCreateFiles()
@@ -124,7 +119,6 @@ function removeCreateFile(index) {
 function resetCreate() {
   selectedFiles = []
   currentFileProofs = []
-  currentSetHash = ''
   currentReceipt = null
   els.fileInput.value = ''
   els.selectedFiles.replaceChildren()
@@ -144,7 +138,6 @@ async function calculateHashes() {
   if (!selectedFiles.length) return
   els.hashFile.disabled = true
   currentFileProofs = []
-  currentSetHash = ''
 
   try {
     for (let index = 0; index < selectedFiles.length; index += 1) {
@@ -156,14 +149,9 @@ async function calculateHashes() {
       currentFileProofs.push({ file, hash })
     }
 
-    if (currentFileProofs.length > 1) {
-      currentSetHash = await setFingerprint(currentFileProofs.map(({ hash }) => hash))
-    }
-
     const fingerprintLines = currentFileProofs.map(
       ({ file, hash }, index) => `${index + 1}. ${file.name}  ${hash}`
     )
-    if (currentSetHash) fingerprintLines.push(`Set fingerprint  ${currentSetHash}`)
     els.hashValue.textContent = fingerprintLines.join('\n')
     els.hashValue.style.whiteSpace = 'pre-wrap'
 
@@ -173,7 +161,6 @@ async function calculateHashes() {
     els.description.focus()
   } catch {
     currentFileProofs = []
-    currentSetHash = ''
     showAlert(els.createAlert, 'This browser could not read one of those files. Try choosing the files again.')
   } finally {
     els.hashFile.disabled = false
@@ -203,8 +190,7 @@ function createReceipt() {
       fileName: file.name,
       fileSizeBytes: file.size,
       mediaType: file.type
-    })),
-    setHash: currentSetHash
+    }))
   })
   currentReceipt._delivery = { primaryEmail, secondEmail }
   renderReceipt()
@@ -230,9 +216,7 @@ function renderReceipt() {
     ['Files', receipt.files.length === 1 ? '1 file' : `${receipt.files.length} files`],
     ...(receipt.files.length === 1 && receipt.files[0].file_name ? [['Filename', receipt.files[0].file_name]] : []),
     [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
-    ...(receipt.files.length === 1
-      ? [['File fingerprint (SHA-256)', receipt.files[0].hash]]
-      : [['Set fingerprint (SHA-256)', receipt.set_hash]]),
+    [receipt.files.length === 1 ? 'File fingerprint (SHA-256)' : 'Fingerprints', receipt.files.length === 1 ? receipt.files[0].hash : `${receipt.files.length} individual SHA-256 fingerprints`],
     ['Created at', new Date(receipt.created_at_device).toLocaleString()]
   ]
   els.receiptSummary.replaceChildren(...rows.flatMap(([key, value]) => {
@@ -263,7 +247,7 @@ async function copyText(text, button, label) {
 
 function downloadReceipt() {
   const receipt = publicReceipt()
-  const keyHash = receipt.set_hash || receipt.files[0].hash
+  const keyHash = receipt.files[0].hash
   const blob = new Blob([receiptToText(receipt)], { type: 'text/plain;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
@@ -308,7 +292,6 @@ async function verify() {
   els.verifyResult.hidden = true
 
   const expectedHashes = extractProofstampFileHashes(els.expectedHash.value)
-  const expectedSetHash = extractSetSha256(els.expectedHash.value)
   if (!selectedVerifyFiles.length) return showAlert(els.verifyAlert, 'Choose one or more files you want to check.')
   if (!expectedHashes.length) return showAlert(els.verifyAlert, 'Paste a valid fingerprint or the full ProofStamp email.')
 
@@ -336,22 +319,14 @@ async function verify() {
     const matchedCount = results.filter(({ match }) => match).length
     const allIndividualMatch = matchedCount === results.length
     const checkingCompleteSet = actual.length === expectedHashes.length
-    let setMatches = null
-    if (checkingCompleteSet && expectedSetHash) {
-      const actualSetHash = await setFingerprint(actual.map(({ hash }) => hash))
-      setMatches = actualSetHash === expectedSetHash
-    }
-
-    const success = allIndividualMatch && setMatches !== false
+    const success = allIndividualMatch
     els.verifyResult.hidden = false
     els.verifyResult.className = `verify-result ${success ? 'match' : 'mismatch'}`
     els.verifyResultIcon.textContent = success ? '✓' : '×'
 
     if (success && checkingCompleteSet && actual.length > 1) {
-      els.verifyResultTitle.textContent = `All ${actual.length} files match this ProofStamp set`
-      els.verifyResultCopy.textContent = expectedSetHash
-        ? 'The selected files match the complete set recorded in this ProofStamp.'
-        : 'Every selected file matches a fingerprint in this ProofStamp.'
+      els.verifyResultTitle.textContent = `All ${actual.length} files match this ProofStamp`
+      els.verifyResultCopy.textContent = 'The selected files match all fingerprints recorded in this ProofStamp.'
     } else if (success && actual.length === 1) {
       els.verifyResultTitle.textContent = 'This file matches the ProofStamp'
       els.verifyResultCopy.textContent = 'The file has exactly the same contents as a file recorded in this ProofStamp.'
@@ -360,9 +335,7 @@ async function verify() {
       els.verifyResultCopy.textContent = 'Every selected file matches a fingerprint in this ProofStamp.'
     } else {
       els.verifyResultTitle.textContent = `${matchedCount} of ${actual.length} selected files match this ProofStamp`
-      els.verifyResultCopy.textContent = setMatches === false
-        ? 'The individual files match, but the complete set does not match the recorded set fingerprint.'
-        : 'A non-matching file is different, changed, or was not part of this ProofStamp.'
+      els.verifyResultCopy.textContent = 'A non-matching file is different, changed, or was not part of this ProofStamp.'
     }
 
     els.actualHash.textContent = results
