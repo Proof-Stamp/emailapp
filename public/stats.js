@@ -1,6 +1,8 @@
 const created = document.querySelector('#stat-created')
 const openRate = document.querySelector('#stat-open-rate')
 const averageFiles = document.querySelector('#stat-average-files')
+const feedbackYes = document.querySelector('#feedback-yes')
+const feedbackNo = document.querySelector('#feedback-no')
 const status = document.querySelector('#stats-status')
 const updated = document.querySelector('#stats-updated')
 
@@ -22,6 +24,8 @@ async function loadStats() {
     created.textContent = formatNumber(metrics.proofstampsCreated)
     openRate.textContent = `${formatDecimal(metrics.emailOpenRatePct)}%`
     averageFiles.textContent = formatDecimal(metrics.averageFilesPerProofstamp)
+    feedbackYes.textContent = formatNumber(metrics.feedbackYes)
+    feedbackNo.textContent = formatNumber(metrics.feedbackNo)
     status.textContent = 'Live aggregate usage since tracking started.'
 
     if (metrics.updatedAt) {
@@ -35,6 +39,8 @@ async function loadStats() {
     created.textContent = '—'
     openRate.textContent = '—'
     averageFiles.textContent = '—'
+    feedbackYes.textContent = '—'
+    feedbackNo.textContent = '—'
     status.textContent = 'Usage metrics are not configured for this deployment yet.'
     updated.hidden = true
   }

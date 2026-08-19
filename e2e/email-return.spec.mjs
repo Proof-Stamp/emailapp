@@ -6,8 +6,9 @@ const photo = {
   buffer: Buffer.from('proofstamp-email-return-photo')
 }
 
-async function createProofstamp(page) {
+async function createProofstamp(page, metrics = null) {
   await page.route('**/api/metrics', async (route) => {
+    if (metrics) metrics.push(JSON.parse(route.request().postData() || '{}'))
     await route.fulfill({ status: 204, body: '' })
   })
   await page.goto('/')
@@ -37,12 +38,35 @@ test.describe('email app return flow', () => {
     await expect(page.locator('#email-status')).toContainText('Your ProofStamp will still be waiting')
     await expect(page.locator('#email-return')).toBeVisible()
     await expect(page.locator('#email-return')).toContainText('Back from your email app?')
+    await expect(page.locator('#email-feedback')).toContainText('Did ProofStamp work as expected?')
 
     await page.locator('#return-verify').click()
     await expect(page.locator('#verify-panel')).toBeVisible()
     await expect(page.locator('#expected-hash')).toHaveValue(/PROOFSTAMP/)
     await expect(page.locator('#expected-hash')).toHaveValue(/Apartment condition before moving out/)
     await expect(page.locator('#expected-hash')).toHaveValue(/return-photo\.jpg/)
+  })
+
+  test('records one anonymous Not quite response and offers an email follow-up', async ({ page }) => {
+    const metrics = []
+    await createProofstamp(page, metrics)
+    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
+    await page.reload()
+
+    await page.locator('#feedback-no').click()
+    await expect.poll(() => metrics.filter((metric) => metric.event === 'feedback_no').length).toBe(1)
+    expect(metrics.find((metric) => metric.event === 'feedback_no')).toEqual({ event: 'feedback_no' })
+
+    await expect(page.locator('#feedback-message')).toContainText('A short note would help us fix it')
+    await expect(page.locator('#feedback-detail')).toBeVisible()
+    await expect(page.locator('#feedback-detail')).toHaveAttribute('href', /mailto:info@proofstamp\.org\?subject=ProofStamp%20feedback/)
+    await expect(page.locator('#feedback-yes')).toBeDisabled()
+    await expect(page.locator('#feedback-no')).toBeDisabled()
+
+    await page.reload()
+    await expect(page.locator('#feedback-no')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#feedback-detail')).toBeVisible()
+    expect(metrics.filter((metric) => metric.event === 'feedback_no')).toHaveLength(1)
   })
 
   test('does not double-count an email app open after reload', async ({ page }) => {
