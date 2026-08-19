@@ -63,7 +63,8 @@ export function createReceipt({
 export function receiptToText(receipt) {
   const lines = [
     'PROOFSTAMP', '',
-    `I created a ProofStamp for: ${receipt.description}`, '',
+    'I sent you a ProofStamp',
+    `For: ${receipt.description}`, '',
     'This record lets you later check whether a file is identical to the one used to create this fingerprint.', '',
     'VERIFY A FILE',
     receipt.verification_url, '',
