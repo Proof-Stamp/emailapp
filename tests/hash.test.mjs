@@ -93,14 +93,14 @@ test('omits private filenames from every file when requested', () => {
   assert.equal(privateReceipt.files[1].file_name, null)
 })
 
-test('limits a ProofStamp to ten files', () => {
+test('limits a ProofStamp to five files', () => {
   const files = Array.from({ length: MAX_FILES_PER_PROOFSTAMP + 1 }, (_, index) => ({
     hash: index % 2 ? receiptHash : secondHash,
     fileName: `file-${index}.jpg`,
     fileSizeBytes: 100,
     mediaType: 'image/jpeg'
   }))
-  assert.throws(() => createReceipt({ description: 'Too many', files }), /Choose between 1 and 10 files/)
+  assert.throws(() => createReceipt({ description: 'Too many', files }), /Choose between 1 and 5 files/)
 })
 
 test('formats the device timestamp for a human reader', () => {
