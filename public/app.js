@@ -154,7 +154,7 @@ function renderReceipt() {
 
 function openEmail() {
   const { primaryEmail, secondEmail } = currentReceipt._delivery
-  window.open(createMailtoUrl({ receipt: publicReceipt(), primaryEmail, secondEmail }), '_blank', 'noopener')
+  window.location.href = createMailtoUrl({ receipt: publicReceipt(), primaryEmail, secondEmail })
 }
 
 async function copyText(text, button, label) {
