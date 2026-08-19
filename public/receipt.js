@@ -3,7 +3,7 @@ import { trackEmailAppOpened, trackProofCreated } from './metrics.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
 export const RECEIPT_VERSION = '2.0'
-export const APP_VERSION = '0.3.2'
+export const APP_VERSION = '0.3.3'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
