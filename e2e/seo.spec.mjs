@@ -6,7 +6,7 @@ test.describe('technical SEO', () => {
   test('homepage exposes canonical, social and ProofStamp entity metadata', async ({ page }) => {
     await page.goto('/')
 
-    await expect(page).toHaveTitle('ProofStamp via Email | Private File Timestamp & SHA-256')
+    await expect(page).toHaveTitle('ProofStamp via Email | Timestamp Photos & Documents Privately')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', CANONICAL)
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
     await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /SHA-256 fingerprints for photos and documents/)
