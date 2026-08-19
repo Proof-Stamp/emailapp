@@ -1,18 +1,19 @@
 # ProofStamp for Important Files
 
-A privacy-first web app that creates a SHA-256 fingerprint for a file in the browser and prepares a ProofStamp email addressed to the user.
+A privacy-first web app that creates SHA-256 fingerprints for one or several files in the browser and prepares one ProofStamp email.
 
-The file is never uploaded. The app has no account system, backend, analytics, or external service dependency.
+The files are never uploaded. The app has no registration, backend, analytics, or external service dependency.
 
-## What the MVP does
+## What the app does
 
-- Hashes photos, documents, and other files locally with SHA-256
-- Requires a plain-language description
-- Addresses the ProofStamp email to the user
-- Recommends an optional second mailbox, preferably at another provider
-- Opens the user's email app with a complete ProofStamp
-- Downloads a portable plain-text ProofStamp
-- Verifies a preserved file against a fingerprint or full ProofStamp email
+- Hashes 1–10 photos, documents, or other files locally with SHA-256
+- Keeps an individual fingerprint for every file
+- Creates an additional set fingerprint when more than one file is selected
+- Requires one plain-language description for the ProofStamp
+- Sends the prepared email to the user or another recipient, with optional CC
+- Opens the user's email app with a complete human-readable ProofStamp
+- Downloads or copies the same portable plain-text ProofStamp
+- Verifies one file, several selected files, or the complete ProofStamp set
 - Explains the evidence value and important limitations
 
 ## Run locally
@@ -43,15 +44,13 @@ All hashing happens through the browser Web Crypto API. Email addresses are used
 
 A ProofStamp is practical supporting evidence, not a trusted timestamp. It does not prove when or where a file was created, who created it, whether it was edited before the ProofStamp, or whether its contents are true.
 
-See [docs/architecture.md](docs/architecture.md) for the ProofStamp format and design decisions.
+See [docs/architecture.md](docs/architecture.md) for the ProofStamp format, set fingerprint, and verification model.
 
 ## Brand assets
 
 - `public/email-receipt-logo.svg` is the current horizontal product logo.
 - `public/proofstamp-email-mark-vector.svg` combines a minimal envelope with the official PS seal using vector paths only.
 - `public/proofstamp-seal.svg` preserves the official ProofStamp logo unchanged.
-
-Legacy duplicate asset names were removed to keep one canonical file for each logo variant.
 
 ## Automated checks
 
