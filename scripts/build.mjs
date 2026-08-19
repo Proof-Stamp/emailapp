@@ -6,7 +6,7 @@ const source = resolve(root, 'public')
 const destination = resolve(root, 'dist')
 
 const canonicalUrl = 'https://email.proofstamp.org/'
-const pageTitle = 'ProofStamp via Email | Private File Timestamp & SHA-256'
+const pageTitle = 'ProofStamp via Email | Timestamp Photos & Documents Privately'
 const pageDescription = 'Create SHA-256 fingerprints for photos and documents in your browser and email a timestamped ProofStamp. Free, private, no registration, no file uploads.'
 
 const structuredData = {
