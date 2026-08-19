@@ -19,6 +19,7 @@
     />
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/feedback.css" />
+    <link rel="stylesheet" href="/ux.css" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
@@ -77,14 +78,15 @@
               <span class="private-badge">Processed locally</span>
             </div>
 
+            <input id="file-input" class="file-input-control" type="file" multiple />
             <label class="drop-zone" id="drop-zone" for="file-input">
-              <input id="file-input" type="file" multiple />
               <span class="upload-icon" aria-hidden="true">↑</span>
               <strong>Drop files here or choose them</strong>
               <span>Up to 5 files, 50 MB each</span>
             </label>
 
             <div id="selected-files" hidden></div>
+            <label id="add-more-files" class="add-another-button" for="file-input" hidden>+ Add another file</label>
 
             <button id="hash-file" class="primary-button full-button" type="button" hidden>
               Create file fingerprints
@@ -131,13 +133,15 @@
                 <small>Use your own inbox, or send it to someone who should be able to verify the files. The address stays in this browser.</small>
               </div>
 
-              <div class="field recommended-field">
+              <button id="add-second-email" class="add-another-button optional-email-button" type="button">+ Add second email</button>
+
+              <div class="field recommended-field" id="second-email-field" hidden>
                 <div class="recommended-heading">
-                  <label for="second-email">CC another email</label>
-                  <span class="recommended-label">Optional</span>
+                  <label for="second-email">Second email</label>
+                  <button id="remove-second-email" class="text-button compact-text-button" type="button">Remove</button>
                 </div>
                 <input id="second-email" type="email" placeholder="another@example.net" />
-                <small>Add another recipient or a backup inbox.</small>
+                <small>Send a copy to another person or backup inbox.</small>
               </div>
 
               <label class="checkbox-row">
@@ -190,14 +194,15 @@
 
           <div id="verify-alert" class="alert" role="alert" hidden></div>
 
+          <input id="verify-file" class="file-input-control" type="file" multiple />
           <label class="drop-zone" id="verify-drop-zone" for="verify-file">
-            <input id="verify-file" type="file" multiple />
             <span class="upload-icon" aria-hidden="true">↑</span>
             <strong>Drop saved files here or choose them</strong>
             <span>Up to 5 files, 50 MB each</span>
           </label>
 
           <div id="verify-selected-files" hidden></div>
+          <label id="add-more-verify-files" class="add-another-button" for="verify-file" hidden>+ Add another file</label>
 
           <div class="field verify-fingerprint-field">
             <label for="expected-hash">Fingerprint or ProofStamp email</label>
