@@ -18,6 +18,19 @@ async function ensureSchema(db) {
       (id, proofstamps_created, email_app_opened, total_files)
     VALUES (1, 0, 0, 0)
   `).run()
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS proofstamp_feedback (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      yes_count INTEGER NOT NULL DEFAULT 0,
+      no_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run()
+  await db.prepare(`
+    INSERT OR IGNORE INTO proofstamp_feedback (id, yes_count, no_count)
+    VALUES (1, 0, 0)
+  `).run()
 }
 
 function dbFrom(env) {
@@ -36,17 +49,30 @@ export async function onRequestGet(context) {
     FROM proofstamp_metrics
     WHERE id = 1
   `).first()
+  const feedback = await db.prepare(`
+    SELECT yes_count, no_count, updated_at
+    FROM proofstamp_feedback
+    WHERE id = 1
+  `).first()
 
   const proofstampsCreated = Number(row?.proofstamps_created || 0)
   const emailAppOpened = Number(row?.email_app_opened || 0)
   const totalFiles = Number(row?.total_files || 0)
+  const feedbackYes = Number(feedback?.yes_count || 0)
+  const feedbackNo = Number(feedback?.no_count || 0)
+  const feedbackTotal = feedbackYes + feedbackNo
 
   return Response.json({
     proofstampsCreated,
     emailAppOpened,
     emailOpenRatePct: proofstampsCreated ? Number(((emailAppOpened / proofstampsCreated) * 100).toFixed(1)) : 0,
     averageFilesPerProofstamp: proofstampsCreated ? Number((totalFiles / proofstampsCreated).toFixed(2)) : 0,
-    updatedAt: row?.updated_at || null
+    feedbackYes,
+    feedbackNo,
+    feedbackTotal,
+    feedbackPositivePct: feedbackTotal ? Number(((feedbackYes / feedbackTotal) * 100).toFixed(1)) : 0,
+    updatedAt: row?.updated_at || null,
+    feedbackUpdatedAt: feedback?.updated_at || null
   }, { headers: JSON_HEADERS })
 }
 
@@ -88,6 +114,17 @@ export async function onRequestPost(context) {
     await db.prepare(`
       UPDATE proofstamp_metrics
       SET email_app_opened = email_app_opened + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = 1
+    `).run()
+    return new Response(null, { status: 204 })
+  }
+
+  if (payload?.event === 'feedback_yes' || payload?.event === 'feedback_no') {
+    const column = payload.event === 'feedback_yes' ? 'yes_count' : 'no_count'
+    await db.prepare(`
+      UPDATE proofstamp_feedback
+      SET ${column} = ${column} + 1,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `).run()
