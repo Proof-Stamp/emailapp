@@ -103,6 +103,10 @@ const homePath = resolve(destination, 'index.html')
 const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
 await writeFile(homePath, homeHtml)
 
+// Cloudflare Pages serves /verify from verify.html without changing the URL.
+// This avoids the old SPA/root rewrite and gives the verifier a real route.
+await writeFile(resolve(destination, 'verify.html'), homeHtml)
+
 const headersPath = resolve(destination, '_headers')
 const headers = await readFile(headersPath, 'utf8')
 await writeFile(headersPath, addScriptHashToCsp(headers, jsonLdCspHash))
