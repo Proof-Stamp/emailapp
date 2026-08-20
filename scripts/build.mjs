@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { addScriptHashToCsp, sha256CspSource } from './csp.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const source = resolve(root, 'public')
@@ -56,6 +57,9 @@ const structuredData = {
   ]
 }
 
+const jsonLdText = JSON.stringify(structuredData)
+const jsonLdCspHash = sha256CspSource(jsonLdText)
+
 function addHomeSeo(html) {
   const socialImage = 'https://email.proofstamp.org/proofstamp-email-mark-vector.svg'
   const seoHead = `    <link rel="canonical" href="${canonicalUrl}" />
@@ -71,7 +75,7 @@ function addHomeSeo(html) {
     <meta name="twitter:title" content="${pageTitle}" />
     <meta name="twitter:description" content="${pageDescription}" />
     <meta name="twitter:image" content="${socialImage}" />
-    <script type="application/ld+json">${JSON.stringify(structuredData)}</script>`
+    <script type="application/ld+json">${jsonLdText}</script>`
 
   return html
     .replace(
@@ -98,5 +102,9 @@ await cp(source, destination, { recursive: true })
 const homePath = resolve(destination, 'index.html')
 const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
 await writeFile(homePath, homeHtml)
+
+const headersPath = resolve(destination, '_headers')
+const headers = await readFile(headersPath, 'utf8')
+await writeFile(headersPath, addScriptHashToCsp(headers, jsonLdCspHash))
 
 console.log(`Built static site in dist/ (v${appVersion})`)
