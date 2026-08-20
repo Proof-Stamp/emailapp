@@ -24,7 +24,7 @@ ProofStamp is intentionally not a trusted intermediary.
 
 - Source files stay on the user's device.
 - Files are read only inside the browser for previewing and hashing.
-- Image previews use temporary local `blob:` URLs. They are not uploaded.
+- Image previews use temporary local browser data. They are not uploaded.
 - Email addresses are used only to construct a local `mailto:` URL.
 - Creating or checking a ProofStamp requires no ProofStamp API call.
 - New ProofStamps do not include a device-generated creation date as evidence.
@@ -32,17 +32,25 @@ ProofStamp is intentionally not a trusted intermediary.
 
 The email provider's received time can provide a practical external record of when the ProofStamp reached that inbox. ProofStamp itself does not claim to provide a trusted timestamp.
 
+## Mobile picker behavior
+
+On Android and other phones, the system file picker may offer Camera, Video, Recorder, Photos & videos, Files, My Files, Documents, or Browse. ProofStamp does not control the order of those system choices.
+
+The create screen therefore explains how to reach both the photo gallery and documents. If the user creates a photo, video, or recording directly from the system picker, ProofStamp also offers a local **Save original copy** action. This copies the exact selected media file through the browser download mechanism so the user is less likely to lose a capture that was handed to the browser without being saved to the normal Photos/Files library.
+
+That safety copy is local. It is not uploaded to ProofStamp and is not proof or timestamp evidence by itself.
+
 ## Photo workflow
 
 For field use, the intended flow is simple:
 
-1. Take photos with the phone's normal Camera app.
+1. Take photos with the phone's normal Camera app when practical.
 2. Review them in the normal Gallery/Photos app.
 3. Choose up to five important or illustrative photos in ProofStamp.
 4. Confirm the selected images from the local thumbnail previews.
 5. Remove or add files as needed, then continue.
 
-This keeps the original photos in the device's normal photo library and avoids turning ProofStamp into a camera app.
+The system picker can still expose Camera/Video/Recorder. When a user creates media that way, use **Save original copy** before leaving if the phone has not saved it elsewhere.
 
 ## Run locally
 
@@ -87,4 +95,4 @@ See [docs/architecture.md](docs/architecture.md) for the format and verification
 
 `npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview.
 
-`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, validation, visible SHA-256 fingerprint output, and large touch targets. GitHub Actions runs this full check on pushes to `main` and can also be started manually while the GitHub-hosted PR runner issue is unresolved.
+`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, picker guidance, media-preservation downloads, validation, visible SHA-256 fingerprint output, and large touch targets. GitHub Actions runs this full check on pushes to `main` and can also be started manually while the GitHub-hosted PR runner issue is unresolved.
