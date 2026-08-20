@@ -40,14 +40,30 @@ test.describe('Concept A mobile flow', () => {
     expect(await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual({ width: 390, height: 844 })
   })
 
-  test('starts with camera and file actions and keeps the privacy promise concise', async ({ page }) => {
+  test('starts with one file picker and keeps the privacy promise concise', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('#hero-title')).toHaveText('Proof a photo or file by email.')
-    await expect(page.locator('#camera-input')).toHaveAttribute('accept', 'image/*')
-    await expect(page.locator('#camera-input')).toHaveAttribute('capture', 'environment')
-    await expect(page.locator('label[for="camera-input"]')).toContainText('Take photo')
-    await expect(page.locator('label[for="file-input"]')).toContainText('Choose files')
+    await expect(page.locator('#camera-input')).toHaveCount(0)
+    await expect(page.locator('label[for="file-input"]')).toContainText('Choose photos or files')
+    await expect(page.locator('#file-stage')).toContainText('Preview your selection')
     await expect(page.locator('#file-stage')).toContainText('Files stay on this device')
+  })
+
+  test('shows local image previews so the user can confirm selected photos', async ({ page }) => {
+    const secondPhoto = {
+      name: 'photo-2.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('proofstamp-mobile-test-photo-2')
+    }
+
+    await page.goto('/')
+    await page.locator('#file-input').setInputFiles([photo, secondPhoto])
+
+    await expect(page.locator('#selected-files .preview-file')).toHaveCount(2)
+    await expect(page.locator('#selected-files img.file-thumbnail')).toHaveCount(2)
+    await expect(page.locator('#selected-files')).toContainText('photo.jpg')
+    await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
+    await expect(page.locator('#selected-files img.file-thumbnail').first()).toHaveAttribute('src', /^blob:/)
   })
 
   test('automatically fingerprints a selected file without a separate hash button', async ({ page }) => {
@@ -61,7 +77,7 @@ test.describe('Concept A mobile flow', () => {
     await expectFocused(page, page.locator('#description'))
   })
 
-  test('adds files one at a time without replacing earlier selections', async ({ page }) => {
+  test('adds files without replacing earlier selections', async ({ page }) => {
     const secondPhoto = {
       name: 'photo-2.jpg',
       mimeType: 'image/jpeg',
@@ -78,12 +94,21 @@ test.describe('Concept A mobile flow', () => {
     await expect(page.locator('#hash-status')).toHaveText('2 files ready ✓')
   })
 
-  test('camera capture path warns the user to preserve the original', async ({ page }) => {
+  test('lets the user remove a mistaken photo from the preview grid', async ({ page }) => {
+    const secondPhoto = {
+      name: 'photo-2.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('proofstamp-mobile-test-photo-2')
+    }
+
     await page.goto('/')
-    await page.locator('#camera-input').setInputFiles(photo)
-    await expect(page.locator('#camera-save-note')).toBeVisible()
-    await expect(page.locator('#camera-save-note')).toContainText('may not appear in your Gallery')
-    await expect(page.locator('#save-camera-files')).toHaveText('Save photo')
+    await page.locator('#file-input').setInputFiles([photo, secondPhoto])
+    await expect(page.locator('#selected-files .preview-file')).toHaveCount(2)
+    await page.getByRole('button', { name: 'Remove photo.jpg' }).click()
+
+    await expect(page.locator('#selected-files .preview-file')).toHaveCount(1)
+    await expect(page.locator('#selected-files')).not.toContainText('photo.jpg')
+    await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
   })
 
   test('empty description moves focus and viewport to the description field', async ({ page }) => {
@@ -224,17 +249,18 @@ test.describe('Concept A mobile flow', () => {
 
   test('primary mobile controls are at least 44 CSS pixels tall', async ({ page }) => {
     await page.goto('/')
-    const initialControls = [page.locator('label[for="camera-input"]'), page.locator('label[for="file-input"]')]
-    for (const control of initialControls) {
-      const box = await control.boundingBox()
-      expect(box?.height || 0).toBeGreaterThanOrEqual(44)
-    }
+    const picker = page.locator('label[for="file-input"]')
+    const pickerBox = await picker.boundingBox()
+    expect(pickerBox?.height || 0).toBeGreaterThanOrEqual(44)
 
     await page.locator('#file-input').setInputFiles(photo)
     await expect(page.locator('#details-stage')).toBeVisible()
-    for (const selector of ['#add-camera', '#add-more-files', '.prepare-button']) {
+    for (const selector of ['#add-more-files', '.prepare-button']) {
       const box = await page.locator(selector).boundingBox()
       expect(box?.height || 0).toBeGreaterThanOrEqual(44)
     }
+
+    const removeBox = await page.getByRole('button', { name: 'Remove photo.jpg' }).boundingBox()
+    expect(removeBox?.height || 0).toBeGreaterThanOrEqual(44)
   })
 })
