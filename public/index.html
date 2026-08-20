@@ -9,7 +9,7 @@
       content="Create a private ProofStamp for photos and files on your device, then email, copy, or save it. No upload. No account."
     />
     <title>ProofStamp for Photos and Files</title>
-    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.1" type="image/svg+xml" />
+    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.2" type="image/svg+xml" />
     <link
       rel="preload"
       href="/fonts/source-serif-4-latin-variable.woff2"
@@ -17,16 +17,16 @@
       type="font/woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/styles.css?v=0.4.1" />
-    <link rel="stylesheet" href="/ux.css?v=0.4.1" />
-    <link rel="stylesheet" href="/concept-a.css?v=0.4.1" />
+    <link rel="stylesheet" href="/styles.css?v=0.4.2" />
+    <link rel="stylesheet" href="/ux.css?v=0.4.2" />
+    <link rel="stylesheet" href="/concept-a.css?v=0.4.2" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
 
     <header class="site-header compact-header">
       <a class="brand" href="/" aria-label="ProofStamp home">
-        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.1" width="41" height="41" alt="" />
+        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.2" width="41" height="41" alt="" />
         <span class="brand-copy">
           <strong>ProofStamp</strong>
           <small>via email</small>
@@ -52,28 +52,20 @@
           <section class="stage capture-stage" id="file-stage" aria-labelledby="file-stage-title">
             <div class="stage-heading simple-stage-heading">
               <div>
-                <h2 id="file-stage-title">Add photos or files</h2>
-                <p class="stage-subcopy">Up to 5 files, 50 MB each. Files stay on this device.</p>
+                <h2 id="file-stage-title">Choose photos or files</h2>
+                <p class="stage-subcopy">Pick up to 5. Preview your selection before you ProofStamp it. Files stay on this device.</p>
               </div>
             </div>
 
-            <div id="capture-actions" class="capture-actions">
-              <input id="camera-input" class="file-input-control" type="file" accept="image/*" capture="environment" />
-              <label class="primary-button capture-button" for="camera-input"><span class="action-icon" aria-hidden="true">●</span><span>Take photo</span></label>
-              <input id="file-input" class="file-input-control" type="file" multiple />
-              <label class="secondary-button capture-button" id="drop-zone" for="file-input"><span class="action-icon" aria-hidden="true">＋</span><span>Choose files</span></label>
-            </div>
+            <input id="file-input" class="file-input-control" type="file" multiple />
+            <label class="primary-button capture-button single-picker" id="drop-zone" for="file-input">
+              <span class="action-icon" aria-hidden="true">＋</span>
+              <span>Choose photos or files</span>
+            </label>
 
-            <div id="selected-files" hidden></div>
-            <div id="add-more-actions" class="add-more-actions" hidden>
-              <label id="add-camera" class="add-another-button" for="camera-input">+ Take another photo</label>
-              <label id="add-more-files" class="add-another-button" for="file-input">+ Add files</label>
-            </div>
+            <div id="selected-files" class="selected-preview-grid" hidden></div>
+            <label id="add-more-files" class="add-another-button" for="file-input" hidden>+ Add more</label>
             <div id="hash-status" class="hash-status" role="status" aria-live="polite" hidden></div>
-            <div id="camera-save-note" class="camera-save-note" hidden>
-              <div><strong>Keep the original photo.</strong><p>Browser camera photos may not appear in your Gallery. Save a copy before you leave this page.</p></div>
-              <button id="save-camera-files" class="secondary-button compact-action" type="button">Save photo</button>
-            </div>
           </section>
 
           <section class="stage details-stage" id="details-stage" aria-labelledby="details-stage-title" hidden>
@@ -153,7 +145,7 @@
     </main>
 
     <footer class="site-footer">
-      <span>ProofStamp · v0.4.1</span>
+      <span>ProofStamp · v0.4.2</span>
       <nav aria-label="Footer navigation">
         <a href="mailto:info@proofstamp.org?subject=ProofStamp%20feedback">Feedback</a>
         <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">Learn about SHA-256</a>
@@ -163,7 +155,7 @@
     </footer>
 
     <noscript><div class="noscript-note">ProofStamp needs JavaScript to calculate SHA-256 on your device. Your files are not uploaded.</div></noscript>
-    <script type="module" src="/app.js?v=0.4.1"></script>
-    <script type="module" src="/return-flow.js?v=0.4.1"></script>
+    <script type="module" src="/app.js?v=0.4.2"></script>
+    <script type="module" src="/return-flow.js?v=0.4.2"></script>
   </body>
 </html>
