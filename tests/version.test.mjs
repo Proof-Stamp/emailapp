@@ -26,11 +26,9 @@ test('package, receipt, source HTML, and build release versions stay in sync', a
   const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'))
   const buildScript = await readFile(resolve(root, 'scripts/build.mjs'), 'utf8')
   const homeHtml = await readFile(resolve(root, 'public/index.html'), 'utf8')
-  const statsHtml = await readFile(resolve(root, 'public/stats/index.html'), 'utf8')
 
   assert.equal(APP_VERSION, packageJson.version)
   assertSourceReleaseSync(homeHtml, packageJson.version)
-  assertSourceReleaseSync(statsHtml, packageJson.version)
   assert.match(buildScript, /ProofStamp · v\$\{appVersion\}/)
   assert.match(buildScript, /\?v=\$\{appVersion\}/)
 })

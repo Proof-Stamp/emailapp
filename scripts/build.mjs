@@ -8,8 +8,8 @@ const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'ut
 const appVersion = packageJson.version
 
 const canonicalUrl = 'https://email.proofstamp.org/'
-const pageTitle = 'ProofStamp via Email | Timestamp Photos & Documents Privately'
-const pageDescription = 'Create SHA-256 fingerprints for photos and documents in your browser and email a timestamped ProofStamp. Free, private, no registration, no file uploads.'
+const pageTitle = 'ProofStamp via Email | Proof Photos & Files Privately'
+const pageDescription = 'Create SHA-256 fingerprints for photos and files on your device, then email, copy, or save the ProofStamp. No upload, no account, no registration.'
 
 const structuredData = {
   '@context': 'https://schema.org',
@@ -49,7 +49,7 @@ const structuredData = {
       publisher: { '@id': 'https://proofstamp.org/#organization' },
       featureList: [
         'Creates SHA-256 file fingerprints in the browser',
-        'Creates one email ProofStamp for one to five files',
+        'Prepares a portable ProofStamp for email, copy, or download',
         'Verifies files locally without uploading them'
       ]
     }
@@ -85,14 +85,6 @@ function addHomeSeo(html) {
     )
 }
 
-function addStatsRobotsMeta(html) {
-  if (html.includes('name="robots"')) return html
-  return html.replace(
-    '    <meta name="theme-color" content="#071b2c" />',
-    '    <meta name="theme-color" content="#071b2c" />\n    <meta name="robots" content="noindex, follow" />'
-  )
-}
-
 function addReleaseVersion(html) {
   return html
     .replace(/<span>ProofStamp(?: · v[0-9.]+)?<\/span>/, `<span>ProofStamp · v${appVersion}</span>`)
@@ -104,12 +96,7 @@ await mkdir(destination, { recursive: true })
 await cp(source, destination, { recursive: true })
 
 const homePath = resolve(destination, 'index.html')
-const statsPath = resolve(destination, 'stats/index.html')
-
 const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
-const statsHtml = addReleaseVersion(addStatsRobotsMeta(await readFile(statsPath, 'utf8')))
-
 await writeFile(homePath, homeHtml)
-await writeFile(statsPath, statsHtml)
 
 console.log(`Built static site in dist/ (v${appVersion})`)

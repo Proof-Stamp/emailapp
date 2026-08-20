@@ -1,7 +1,7 @@
-import { createMailtoUrl, formatBytes, receiptToText } from './receipt.js'
+import { createMailtoUrl, receiptToText } from './receipt.js'
 
-const RECEIPT_KEY = 'proofstamp.currentReceipt.v1'
-const EMAIL_OPENED_KEY = 'proofstamp.emailOpened.v1'
+const RECEIPT_KEY = 'proofstamp.currentReceipt.v2'
+const EMAIL_OPENED_KEY = 'proofstamp.emailOpened.v2'
 
 const $ = (selector) => document.querySelector(selector)
 const receiptStage = $('#receipt-stage')
@@ -30,6 +30,21 @@ function safeSessionSet(key, value) {
 
 function safeSessionRemove(key) {
   try { sessionStorage.removeItem(key) } catch {}
+}
+
+function showToast(message) {
+  document.querySelector('[data-proofstamp-toast]')?.remove()
+  const toast = document.createElement('div')
+  toast.dataset.proofstampToast = 'true'
+  toast.setAttribute('role', 'alert')
+  toast.textContent = message
+  Object.assign(toast.style, {
+    position: 'fixed', left: '50%', bottom: '1rem', zIndex: '1000', maxWidth: 'calc(100% - 2rem)',
+    padding: '.8rem 1rem', borderRadius: '.7rem', background: 'var(--navy)', color: 'white', fontWeight: '700',
+    fontSize: '.85rem', boxShadow: '0 12px 32px rgba(7, 27, 44, .22)', transform: 'translateX(-50%)'
+  })
+  document.body.append(toast)
+  setTimeout(() => toast.remove(), 4500)
 }
 
 function readState() {
@@ -97,13 +112,10 @@ function captureState() {
   const files = fingerprintFiles()
   if (!files.length || !primaryEmail?.value.trim()) return null
 
-  const createdText = summaryValue('Created at')
-  const createdDate = new Date(createdText)
   const state = {
     receipt: {
       description: description?.value.trim() || summaryValue('Description'),
       files,
-      created_at_device: Number.isNaN(createdDate.getTime()) ? new Date().toISOString() : createdDate.toISOString(),
       verification_url: 'https://email.proofstamp.org/verify'
     },
     delivery: {
@@ -139,10 +151,10 @@ function ensureReturnUi() {
   returnPanel.className = 'email-return'
   returnPanel.hidden = true
   returnPanel.innerHTML = `
-    <strong>Back from your email app?</strong>
+    <strong>Back from email?</strong>
     <p>Your ProofStamp is still here.</p>
     <div class="email-return-actions">
-      <button id="return-create" class="secondary-button" type="button">Create another ProofStamp</button>
+      <button id="return-create" class="secondary-button" type="button">Create another</button>
       <button id="return-verify" class="secondary-button" type="button">Check a file</button>
     </div>
   `
@@ -163,22 +175,14 @@ function ensureReturnUi() {
 
 function showEmailOpenedState({ showReturn = false, desktop = false } = {}) {
   ensureReturnUi()
-  if (openEmailButton) openEmailButton.textContent = 'Open email app again'
+  if (openEmailButton) openEmailButton.textContent = 'Open email again'
   if (emailStatus) {
     emailStatus.textContent = desktop
-      ? 'Email opened separately. After sending, come back to this ProofStamp tab.'
-      : 'Email app opened. After sending, come back here. Your ProofStamp will still be waiting.'
+      ? 'Email opened separately. Come back here after sending.'
+      : 'Email opened. Come back here after sending.'
     emailStatus.hidden = false
   }
-  if (returnPanel && showReturn) {
-    const heading = returnPanel.querySelector(':scope > strong')
-    const copy = returnPanel.querySelector(':scope > p')
-    if (heading) heading.textContent = desktop ? 'After sending the email' : 'Back from your email app?'
-    if (copy) copy.textContent = desktop
-      ? 'Come back to this tab. Your ProofStamp is still here.'
-      : 'Your ProofStamp is still here.'
-    returnPanel.hidden = false
-  }
+  if (returnPanel && showReturn) returnPanel.hidden = false
 }
 
 function restoreState() {
@@ -188,10 +192,6 @@ function restoreState() {
   $('#file-stage').hidden = true
   $('#details-stage').hidden = true
   receiptStage.hidden = false
-  document.querySelectorAll('.step').forEach((step, index) => {
-    step.classList.toggle('active', index === 2)
-    step.classList.toggle('complete', index < 2)
-  })
 
   receiptSummary.replaceChildren(...savedState.summary.flatMap(([key, value]) => {
     const dt = document.createElement('dt')
@@ -203,7 +203,7 @@ function restoreState() {
   if (providerCount) providerCount.textContent = savedState.providerCount
 
   const intro = receiptStage.querySelector('.success-intro')
-  if (intro) intro.textContent = 'Open your email app, send the ProofStamp, then come back here.'
+  if (intro) intro.textContent = 'Open your email and send the ProofStamp.'
 
   if (safeSessionGet(EMAIL_OPENED_KEY) === '1') showEmailOpenedState({ showReturn: true })
   return true
@@ -212,11 +212,7 @@ function restoreState() {
 function mailtoForSavedState() {
   if (!savedState) return null
   const { receipt, delivery } = savedState
-  return createMailtoUrl({
-    receipt,
-    primaryEmail: delivery.primaryEmail,
-    secondEmail: delivery.secondEmail
-  })
+  return createMailtoUrl({ receipt, primaryEmail: delivery.primaryEmail, secondEmail: delivery.secondEmail })
 }
 
 function openRestoredEmail() {
@@ -230,9 +226,15 @@ function openDesktopEmail() {
   window.open(mailto, '_blank', 'noopener,noreferrer')
 }
 
-function copyRestoredReceipt() {
+async function copyRestoredReceipt() {
   if (!savedState) return
-  navigator.clipboard?.writeText(receiptToText(savedState.receipt)).catch(() => {})
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+    await navigator.clipboard.writeText(receiptToText(savedState.receipt))
+    showToast('ProofStamp copied.')
+  } catch {
+    showToast('Copying was blocked. Use Save ProofStamp instead.')
+  }
 }
 
 function downloadRestoredReceipt() {
@@ -242,15 +244,17 @@ function downloadRestoredReceipt() {
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = `proofstamp-${savedState.receipt.files[0].hash.slice(0, 12)}.txt`
+  document.body.append(link)
   link.click()
-  URL.revokeObjectURL(link.href)
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000)
 }
 
 function handleReceiptVisible() {
   if (!receiptStage || receiptStage.hidden) return
   const intro = receiptStage.querySelector('.success-intro')
-  if (intro) intro.textContent = 'Open your email app, send the ProofStamp, then come back here.'
-  if (openEmailButton && safeSessionGet(EMAIL_OPENED_KEY) !== '1') openEmailButton.textContent = 'Open email app'
+  if (intro) intro.textContent = 'Open your email and send the ProofStamp.'
+  if (openEmailButton && safeSessionGet(EMAIL_OPENED_KEY) !== '1') openEmailButton.textContent = 'Open email'
   ensureReturnUi()
   if (!restored) captureState()
 }
@@ -258,7 +262,7 @@ function handleReceiptVisible() {
 if (receiptStage) {
   const style = document.createElement('link')
   style.rel = 'stylesheet'
-  style.href = '/return-flow.css'
+  style.href = '/return-flow.css?v=0.4.0'
   document.head.append(style)
 
   ensureReturnUi()

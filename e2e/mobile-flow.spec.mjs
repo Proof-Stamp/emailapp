@@ -21,11 +21,11 @@ async function expectFocused(page, locator) {
   await expectInViewport(locator)
 }
 
-async function chooseAndHash(page) {
+async function chooseAndReady(page, selected = photo) {
   await page.goto('/')
-  await page.locator('#file-input').setInputFiles(photo)
-  await page.locator('#hash-file').click()
+  await page.locator('#file-input').setInputFiles(selected)
   await expect(page.locator('#details-stage')).toBeVisible()
+  await expect(page.locator('#hash-status')).toContainText('ready')
   await expectFocused(page, page.locator('#description'))
 }
 
@@ -34,13 +34,22 @@ async function completeRequiredFields(page) {
   await page.locator('#primary-email').fill('person@example.com')
 }
 
-test.describe('mobile validation and stage navigation', () => {
+test.describe('Concept A mobile flow', () => {
   test('uses the 390x844 mobile viewport', async ({ page }) => {
     await page.goto('/')
     expect(await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual({ width: 390, height: 844 })
   })
 
-  test('adds files one at a time without replacing earlier selections', async ({ page }) => {
+  test('starts with one file picker and keeps the privacy promise concise', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('#hero-title')).toHaveText('Proof a photo or file by email.')
+    await expect(page.locator('#camera-input')).toHaveCount(0)
+    await expect(page.locator('label[for="file-input"]')).toContainText('Choose photos or files')
+    await expect(page.locator('#file-stage')).toContainText('Preview your selection')
+    await expect(page.locator('#file-stage')).toContainText('Files stay on this device')
+  })
+
+  test('shows local image previews so the user can confirm selected photos', async ({ page }) => {
     const secondPhoto = {
       name: 'photo-2.jpg',
       mimeType: 'image/jpeg',
@@ -48,49 +57,73 @@ test.describe('mobile validation and stage navigation', () => {
     }
 
     await page.goto('/')
-    await page.locator('#file-input').setInputFiles(photo)
-    await expect(page.locator('#selected-files .selected-file')).toHaveCount(1)
-    await expect(page.locator('#selected-files')).toContainText('photo.jpg')
-    await expect(page.locator('#add-more-files')).toBeVisible()
+    await page.locator('#file-input').setInputFiles([photo, secondPhoto])
 
+    await expect(page.locator('#selected-files .preview-file')).toHaveCount(2)
+    await expect(page.locator('#selected-files img.file-thumbnail')).toHaveCount(2)
+    await expect(page.locator('#selected-files')).toContainText('photo.jpg')
+    await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
+    await expect(page.locator('#selected-files img.file-thumbnail').first()).toHaveAttribute('src', /^blob:/)
+  })
+
+  test('automatically fingerprints a selected file without a separate hash button', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('#hash-file')).toHaveCount(0)
+    await page.locator('#file-input').setInputFiles(photo)
+
+    await expect(page.locator('#selected-files .selected-file')).toHaveCount(1)
+    await expect(page.locator('#hash-status')).toHaveText('1 file ready ✓')
+    await expect(page.locator('#details-stage')).toBeVisible()
+    await expectFocused(page, page.locator('#description'))
+  })
+
+  test('adds files without replacing earlier selections', async ({ page }) => {
+    const secondPhoto = {
+      name: 'photo-2.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from('proofstamp-mobile-test-photo-2')
+    }
+
+    await chooseAndReady(page)
+    await expect(page.locator('#add-more-files')).toBeVisible()
     await page.locator('#file-input').setInputFiles(secondPhoto)
+
     await expect(page.locator('#selected-files .selected-file')).toHaveCount(2)
     await expect(page.locator('#selected-files')).toContainText('photo.jpg')
     await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
-    await expect(page.locator('#hash-file')).toHaveText('Create 2 file fingerprints')
+    await expect(page.locator('#hash-status')).toHaveText('2 files ready ✓')
   })
 
-  test('adds verifier files one at a time without replacing earlier selections', async ({ page }) => {
+  test('lets the user remove a mistaken photo from the preview grid', async ({ page }) => {
     const secondPhoto = {
-      name: 'verify-2.jpg',
+      name: 'photo-2.jpg',
       mimeType: 'image/jpeg',
-      buffer: Buffer.from('proofstamp-verify-photo-2')
+      buffer: Buffer.from('proofstamp-mobile-test-photo-2')
     }
 
-    await page.goto('/verify')
-    await page.locator('#verify-file').setInputFiles(photo)
-    await expect(page.locator('#verify-selected-files .selected-file')).toHaveCount(1)
-    await expect(page.locator('#add-more-verify-files')).toBeVisible()
+    await page.goto('/')
+    await page.locator('#file-input').setInputFiles([photo, secondPhoto])
+    await expect(page.locator('#selected-files .preview-file')).toHaveCount(2)
+    await page.getByRole('button', { name: 'Remove photo.jpg' }).click()
 
-    await page.locator('#verify-file').setInputFiles(secondPhoto)
-    await expect(page.locator('#verify-selected-files .selected-file')).toHaveCount(2)
-    await expect(page.locator('#verify-selected-files')).toContainText('photo.jpg')
-    await expect(page.locator('#verify-selected-files')).toContainText('verify-2.jpg')
+    await expect(page.locator('#selected-files .preview-file')).toHaveCount(1)
+    await expect(page.locator('#selected-files')).not.toContainText('photo.jpg')
+    await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
   })
 
   test('empty description moves focus and viewport to the description field', async ({ page }) => {
-    await chooseAndHash(page)
+    await chooseAndReady(page)
     await page.locator('#primary-email').fill('person@example.com')
     await page.locator('button[type="submit"]').click()
 
     const field = page.locator('#description')
     await expect(field).toHaveAttribute('aria-invalid', 'true')
-    await expect(page.locator('#description-error')).toContainText('Add a short description')
+    await expect(page.locator('#description-error')).toHaveText('Add a short description.')
     await expectFocused(page, field)
   })
 
   test('invalid primary email moves focus and viewport to the email field', async ({ page }) => {
-    await chooseAndHash(page)
+    await chooseAndReady(page)
     await page.locator('#description').fill('Move-out photos')
     await page.locator('#primary-email').fill('not-an-email')
     await page.locator('button[type="submit"]').click()
@@ -101,13 +134,12 @@ test.describe('mobile validation and stage navigation', () => {
     await expectFocused(page, field)
   })
 
-  test('keeps the optional second email hidden until requested and validates it in place', async ({ page }) => {
-    await chooseAndHash(page)
+  test('keeps the optional second recipient hidden until requested and validates it in place', async ({ page }) => {
+    await chooseAndReady(page)
     await completeRequiredFields(page)
 
     const cc = page.locator('#second-email')
     await expect(page.locator('#second-email-field')).toBeHidden()
-    await expect(page.locator('#add-second-email')).toBeVisible()
     await page.locator('#add-second-email').click()
     await expect(page.locator('#second-email-field')).toBeVisible()
     await expectFocused(page, cc)
@@ -119,34 +151,49 @@ test.describe('mobile validation and stage navigation', () => {
 
     await cc.fill('person@example.com')
     await page.locator('button[type="submit"]').click()
-    await expect(page.locator('#second-email-error')).toHaveText('Use a different address for the second email.')
+    await expect(page.locator('#second-email-error')).toHaveText('Use a different address for the second recipient.')
     await expectFocused(page, cc)
-
-    await page.locator('#remove-second-email').click()
-    await expect(page.locator('#second-email-field')).toBeHidden()
-    await expect(cc).toHaveValue('')
-    await expectFocused(page, page.locator('#add-second-email'))
   })
 
-  test('moves from hashing to context, then to the ready state, then back to step 1', async ({ page }) => {
-    await chooseAndHash(page)
+  test('moves to Ready and exposes email, copy, save, and attachment guidance', async ({ page }) => {
+    await chooseAndReady(page)
     await completeRequiredFields(page)
     await page.locator('button[type="submit"]').click()
 
     const readyTitle = page.locator('#receipt-stage-title')
     await expect(page.locator('#receipt-stage')).toBeVisible()
+    await expect(readyTitle).toHaveText('Ready')
     await expectFocused(page, readyTitle)
+    await expect(page.locator('#open-email')).toHaveText('Open email')
+    await expect(page.locator('#copy-receipt')).toHaveText('Copy ProofStamp')
+    await expect(page.locator('#download-receipt')).toHaveText('Save ProofStamp')
+    await expect(page.locator('.attach-note')).toContainText('Optional: attach the original files.')
+    await expect(page.locator('.offline-note')).toContainText('No connection?')
+    await expect(page.locator('#receipt-summary')).not.toContainText('Created at')
+  })
 
-    await page.locator('#create-another').click()
-    const stepOneTitle = page.locator('#file-stage-title')
-    await expect(page.locator('#file-stage')).toBeVisible()
-    await expectFocused(page, stepOneTitle)
+  test('create and verify flows make no application API requests', async ({ page }) => {
+    const apiRequests = []
+    await page.route('**/api/**', async (route) => {
+      apiRequests.push({ method: route.request().method(), url: route.request().url() })
+      await route.fulfill({ status: 204, body: '' })
+    })
+
+    await chooseAndReady(page)
+    await completeRequiredFields(page)
+    await page.locator('button[type="submit"]').click()
+    await page.locator('#verify-tab').click()
+    await page.locator('#verify-file').setInputFiles(photo)
+    const fingerprint = createHash('sha256').update(photo.buffer).digest('hex')
+    await page.locator('#expected-hash').fill(fingerprint)
+    await page.locator('#verify-button').click()
+    await expect(page.locator('#verify-result')).toHaveClass(/match/)
+
+    expect(apiRequests).toEqual([])
   })
 
   test('rejects more than five files without losing the previous valid selection', async ({ page }) => {
-    await page.goto('/')
-    await page.locator('#file-input').setInputFiles(photo)
-    await expect(page.locator('#selected-files')).toContainText('photo.jpg')
+    await chooseAndReady(page)
 
     const tooMany = Array.from({ length: 6 }, (_, index) => ({
       name: `photo-${index + 1}.jpg`,
@@ -164,22 +211,9 @@ test.describe('mobile validation and stage navigation', () => {
 
   test('/verify opens directly at the verifier on mobile', async ({ page }) => {
     await page.goto('/verify')
-
     await expect(page.locator('#verify-panel')).toBeVisible()
     await expect(page.locator('#verify-tab')).toHaveAttribute('aria-selected', 'true')
     await expectFocused(page, page.locator('.verify-intro h2'))
-  })
-
-  test('invalid verification text moves focus to the ProofStamp field', async ({ page }) => {
-    await page.goto('/verify')
-    await page.locator('#verify-file').setInputFiles(photo)
-    await page.locator('#expected-hash').fill('not a fingerprint')
-    await page.locator('#verify-button').click()
-
-    const field = page.locator('#expected-hash')
-    await expect(field).toHaveAttribute('aria-invalid', 'true')
-    await expect(page.locator('#expected-hash-error')).toContainText('Paste a valid fingerprint')
-    await expectFocused(page, field)
   })
 
   test('successful verification moves the result into view', async ({ page }) => {
@@ -191,11 +225,11 @@ test.describe('mobile validation and stage navigation', () => {
 
     const result = page.locator('#verify-result')
     await expect(result).toHaveClass(/match/)
-    await expect(page.locator('#verify-result-title')).toHaveText('This file matches the ProofStamp')
+    await expect(page.locator('#verify-result-title')).toHaveText('This file matches')
     await expectInViewport(result)
   })
 
-  test('clipboard failure shows a visible toast instead of an off-screen alert', async ({ page }) => {
+  test('clipboard failure shows a visible fallback', async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
@@ -203,54 +237,30 @@ test.describe('mobile validation and stage navigation', () => {
       })
     })
 
-    await chooseAndHash(page)
+    await chooseAndReady(page)
     await completeRequiredFields(page)
     await page.locator('button[type="submit"]').click()
     await page.locator('#copy-receipt').click()
 
     const toast = page.locator('[data-proofstamp-toast]')
-    await expect(toast).toContainText('Copying was blocked')
+    await expect(toast).toContainText('Use Save ProofStamp instead')
     await expectInViewport(toast)
   })
 
-  test('usage metrics contain only aggregate event data', async ({ page }) => {
-    const metrics = []
-    await page.route('**/api/metrics', async (route) => {
-      metrics.push(JSON.parse(route.request().postData() || '{}'))
-      await route.fulfill({ status: 204, body: '' })
-    })
+  test('primary mobile controls are at least 44 CSS pixels tall', async ({ page }) => {
+    await page.goto('/')
+    const picker = page.locator('label[for="file-input"]')
+    const pickerBox = await picker.boundingBox()
+    expect(pickerBox?.height || 0).toBeGreaterThanOrEqual(44)
 
-    await chooseAndHash(page)
-    await completeRequiredFields(page)
-    await page.locator('button[type="submit"]').click()
+    await page.locator('#file-input').setInputFiles(photo)
+    await expect(page.locator('#details-stage')).toBeVisible()
+    for (const selector of ['#add-more-files', '.prepare-button']) {
+      const box = await page.locator(selector).boundingBox()
+      expect(box?.height || 0).toBeGreaterThanOrEqual(44)
+    }
 
-    await expect.poll(() => metrics.some((metric) => metric.event === 'proof_created')).toBe(true)
-    const createdMetric = metrics.find((metric) => metric.event === 'proof_created')
-    expect(createdMetric).toEqual(expect.objectContaining({ event: 'proof_created', fileCount: 1 }))
-    expect(createdMetric.eventId).toEqual(expect.any(String))
-
-    await page.evaluate(async () => {
-      const { createMailtoUrl } = await import('/receipt.js')
-      const receipt = {
-        description: 'Private description',
-        files: [{
-          hash: 'a'.repeat(64),
-          file_name: 'private-photo.jpg',
-          file_size_bytes: 123,
-          media_type: 'image/jpeg'
-        }],
-        created_at_device: '2026-08-19T18:00:00.000Z',
-        verification_url: 'https://email.proofstamp.org/verify'
-      }
-      createMailtoUrl({ receipt, primaryEmail: 'private@example.com' })
-      createMailtoUrl({ receipt, primaryEmail: 'private@example.com' })
-    })
-
-    await expect.poll(() => metrics.filter((metric) => metric.event === 'email_opened').length).toBe(1)
-    const serialized = JSON.stringify(metrics)
-    expect(serialized).not.toContain('private-photo.jpg')
-    expect(serialized).not.toContain('private@example.com')
-    expect(serialized).not.toContain('Private description')
-    expect(serialized).not.toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+    const removeBox = await page.getByRole('button', { name: 'Remove photo.jpg' }).boundingBox()
+    expect(removeBox?.height || 0).toBeGreaterThanOrEqual(44)
   })
 })

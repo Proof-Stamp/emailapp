@@ -27,8 +27,7 @@ const receipt = createReceipt({
   fileName: 'bedroom.jpg',
   includeFilename: true,
   fileSizeBytes: 2048,
-  mediaType: 'image/jpeg',
-  createdAtDevice: '2026-08-17T12:00:00.000Z'
+  mediaType: 'image/jpeg'
 })
 
 const multiReceipt = createReceipt({
@@ -38,8 +37,7 @@ const multiReceipt = createReceipt({
     { hash: receiptHash, fileName: 'front.jpg', fileSizeBytes: 1024, mediaType: 'image/jpeg' },
     { hash: secondHash, fileName: 'kitchen.jpg', fileSizeBytes: 2048, mediaType: 'image/jpeg' },
     { hash: thirdHash, fileName: 'bedroom.jpg', fileSizeBytes: 3072, mediaType: 'image/jpeg' }
-  ],
-  createdAtDevice: '2026-08-19T16:24:00.000Z'
+  ]
 })
 
 test('hashes exact bytes with SHA-256', async () => {
@@ -64,14 +62,15 @@ test('different bytes produce different fingerprints', async () => {
   assert.notEqual(first, second)
 })
 
-test('creates a portable single-file ProofStamp without email addresses', () => {
+test('creates a portable single-file ProofStamp without delivery data or a device timestamp', () => {
   assert.equal(receipt.schema, RECEIPT_SCHEMA)
-  assert.equal(receipt.version, '2.0')
+  assert.equal(receipt.version, '2.1')
   assert.equal(receipt.files.length, 1)
   assert.equal(receipt.files[0].hash, receiptHash)
   assert.equal(receipt.files[0].file_name, 'bedroom.jpg')
   assert.equal('primaryEmail' in receipt, false)
   assert.equal('secondEmail' in receipt, false)
+  assert.equal('created_at_device' in receipt, false)
 })
 
 test('creates one ProofStamp for several files', () => {
@@ -103,14 +102,14 @@ test('limits a ProofStamp to five files', () => {
   assert.throws(() => createReceipt({ description: 'Too many', files }), /Choose between 1 and 5 files/)
 })
 
-test('formats the device timestamp for a human reader', () => {
+test('still formats legacy device timestamps when reading older ProofStamps', () => {
   assert.equal(
     formatReceiptDate('2026-08-19T00:24:41.927Z'),
     'August 19, 2026 at 12:24 AM UTC'
   )
 })
 
-test('builds a standards-friendly mailto URL with clean single-file ProofStamp', () => {
+test('builds a standards-friendly mailto URL with a concise single-file ProofStamp', () => {
   const mailto = createMailtoUrl({
     receipt,
     primaryEmail: 'person@example.com',
@@ -125,34 +124,31 @@ test('builds a standards-friendly mailto URL with clean single-file ProofStamp',
   assert.equal(url.searchParams.get('cc'), 'backup@example.net')
   const body = url.searchParams.get('body')
   assert.match(body, new RegExp(receiptHash))
-  assert.match(body, /Here is a ProofStamp for Apartment condition before moving in\./)
+  assert.match(body, /ProofStamp for: Apartment condition before moving in/)
   assert.match(body, /VERIFY THE FILE/)
   assert.match(body, /\nFILE\nbedroom\.jpg · 2\.0 KB/)
-  assert.match(body, /Keep the original file\. If its fingerprint matches this ProofStamp later, the file has not changed\./)
+  assert.match(body, /SHA-256 hash \/ file fingerprint:/)
+  assert.match(body, /Keep the exact original file\./)
   assert.match(body, /The email received time shows when this ProofStamp reached the inbox\./)
-  assert.match(body, /Free\. Private\. No registration\. Your file stays on your device\./)
-  assert.match(body, /Create your own ProofStamp →/)
-  assert.doesNotMatch(body, /ABOUT THIS PROOFSTAMP/)
-  assert.doesNotMatch(body, /I sent you a ProofStamp/)
-  assert.doesNotMatch(body, /Use it to check later/)
+  assert.match(body, /No upload\. No account\. Files stay on your device\./)
+  assert.match(body, /Create a ProofStamp:/)
+  assert.doesNotMatch(body, /Created at:/)
+  assert.doesNotMatch(body, /created_at_device/)
 })
 
-test('renders a concise multi-file ProofStamp email', () => {
+test('renders a concise multi-file ProofStamp email without a device-generated date', () => {
   const text = receiptToText(multiReceipt)
-  assert.match(text, /Here is a ProofStamp for Apartment condition before moving out\./)
+  assert.match(text, /ProofStamp for: Apartment condition before moving out/)
   assert.match(text, /VERIFY THE FILES/)
   assert.match(text, /\nFILES\n/)
   assert.match(text, /1\. front\.jpg · 1\.0 KB/)
   assert.match(text, /2\. kitchen\.jpg · 2\.0 KB/)
   assert.match(text, /3\. bedroom\.jpg · 3\.0 KB/)
-  assert.match(text, /Created at: August 19, 2026 at 4:24 PM UTC/)
-  assert.match(text, /Keep the original files\. If their fingerprints match this ProofStamp later, the files have not changed\./)
+  assert.match(text, /SHA-256 hash \/ file fingerprint:/)
+  assert.match(text, /Keep the exact original files\./)
   assert.match(text, /The email received time shows when this ProofStamp reached the inbox\./)
-  assert.match(text, /Free\. Private\. No registration\. Your files stay on your device\./)
-  assert.match(text, /Create your own ProofStamp →/)
-  assert.doesNotMatch(text, /3 files were fingerprinted/)
-  assert.doesNotMatch(text, /ABOUT THIS PROOFSTAMP/)
-  assert.doesNotMatch(text, /Set fingerprint/)
+  assert.match(text, /No upload\. No account\. Files stay on your device\./)
+  assert.doesNotMatch(text, /Created at:/)
   assert.doesNotMatch(text, /Created on this device/)
 })
 
@@ -178,7 +174,8 @@ test('loads current multi-file and legacy single-file JSON receipts', () => {
     description: 'Legacy file',
     file_name: 'legacy.jpg',
     file_size_bytes: 500,
-    media_type: 'image/jpeg'
+    media_type: 'image/jpeg',
+    created_at_device: '2026-08-01T12:00:00.000Z'
   }
   assert.equal(parseReceiptJson(JSON.stringify(legacy)).hash, receiptHash)
   assert.throws(() => parseReceiptJson(JSON.stringify({ hash: receiptHash })), /Invalid ProofStamp file/)
