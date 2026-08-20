@@ -1,70 +1,44 @@
 # ProofStamp via Email
 
-A privacy-first web utility that creates SHA-256 fingerprints for photos and files on the user's device and prepares a portable ProofStamp.
+A privacy-first local web utility that creates SHA-256 hashes for one or more files in the browser and prepares a portable ProofStamp that the user can email, copy, or save.
 
-The core model is deliberately small:
-
-**file → SHA-256 on this device → ProofStamp → email, copy, or save**
-
-No account is required. Files are not uploaded. Creating and checking a ProofStamp does not call a ProofStamp API or store proof data on a server.
+The core create and verify flows do not require a ProofStamp account, proof database, file upload, analytics endpoint, or external API. The user's device reads the file and performs the SHA-256 calculation locally.
 
 ## What the app does
 
-- Takes a photo or selects 1–5 existing photos, documents, or other files
-- Hashes every file locally with the browser Web Crypto API
-- Starts hashing automatically after selection
-- Keeps an individual SHA-256 fingerprint for every file
-- Adds one plain-language description and a destination email
-- Opens the user's email app with a human-readable ProofStamp
-- Lets the user copy or download the same portable plain-text ProofStamp
+- Hashes 1–5 photos, documents, or other files locally with SHA-256
+- Provides a prominent mobile **Take photo** path plus regular file selection
+- Automatically calculates the SHA-256 hash after files are selected
+- Shows the actual **SHA-256 hash / file fingerprint** in the ready screen and generated ProofStamp
+- Keeps an individual fingerprint for every file
+- Requires one plain-language description for the ProofStamp
+- Prepares an email to the user or another recipient, with optional CC
+- Lets the user copy or save the same portable plain-text ProofStamp
 - Lets the user optionally attach the exact original files in their own email app
-- Verifies one file, several files, or all files locally
+- Verifies one file, several selected files, or all files in a ProofStamp locally
 
-## Camera capture
+## Trust boundary
 
-On supported mobile browsers, **Take photo** requests the outward-facing camera with a standard HTML file input.
-
-A photo captured from a browser is not guaranteed to appear in the device's normal Gallery or Photos library. ProofStamp therefore warns the user and offers **Save photo** to download an exact local copy. The original bytes matter because later verification requires the exact original file.
-
-`capture="environment"` is progressive enhancement. **Choose files** remains available when direct camera capture is unsupported or undesirable.
-
-## Time evidence
-
-A ProofStamp does not create or claim a trusted timestamp itself.
-
-New ProofStamps deliberately do not include a device-generated creation date because the device clock is controlled by the user and can be changed.
-
-When the user sends the ProofStamp by email, the receiving mail system's received time can provide a practical external record that the ProofStamp reached that inbox by that time.
-
-An unsent draft, copied ProofStamp, downloaded ProofStamp, attached original file, or device clock is not treated as trusted timestamp evidence.
-
-## Offline behavior
-
-Hashing, ProofStamp creation, copying, downloading, and verification are local operations and do not require a ProofStamp backend.
-
-If the device has no internet connection, the user can still create the ProofStamp and copy or save it. Their email app may also preserve a draft for sending later, depending on the email client.
-
-The current version does not yet include a service worker/offline app shell. That can be added later without introducing proof storage or synchronization.
-
-## Privacy and security
-
-The core create/check flow is designed to have a minimal trust surface:
+ProofStamp is intentionally not a trusted intermediary.
 
 - Source files stay on the user's device.
-- Hashing uses the browser Web Crypto API.
+- Files are read only inside the browser for hashing.
 - Email addresses are used only to construct a local `mailto:` URL.
-- ProofStamp does not send file contents, fingerprints, filenames, descriptions, recipient addresses, or file metadata to a backend.
-- There is no account, login, cookie-based identity, proof database, or metrics API.
-- The production security policy sets `connect-src 'none'`, preventing client-side fetch/XHR/WebSocket connections.
-- Temporary return-from-email state uses `sessionStorage` only so the current ProofStamp can remain visible when the user comes back from their mail app. It is not part of the proof and is not sent to ProofStamp.
+- Creating or checking a ProofStamp requires no ProofStamp API call.
+- New ProofStamps do not include a device-generated creation date as evidence.
+- Local `sessionStorage` is used only to preserve the current screen across the email-app handoff.
 
-A ProofStamp is supporting evidence, not proof of truth. It does not establish when or where a file was originally created, who created it, whether it was edited before the ProofStamp, or whether its contents are true.
+The email provider's received time can provide a practical external record of when the ProofStamp reached that inbox. ProofStamp itself does not claim to provide a trusted timestamp.
 
-See [docs/architecture.md](docs/architecture.md) for the ProofStamp format and verification model.
+## Camera photos
+
+A browser camera capture is not guaranteed to appear in the device's Gallery/Photos app. When a photo was captured through the ProofStamp camera path, the UI warns the user to preserve the exact original and offers a local **Save photo** action.
+
+No ProofStamp server receives that photo.
 
 ## Run locally
 
-Playwright is used for browser tests.
+Playwright is used for development and browser tests.
 
 ```bash
 npm install
@@ -83,16 +57,24 @@ For Cloudflare Pages:
 - Output directory: `dist`
 - Node version: `22`
 
-The only Cloudflare Function retained is preview-deployment middleware that prevents preview URLs from being indexed. The ProofStamp create and verify flows do not depend on a Function or API.
+The project is a static client. The only Cloudflare Pages Function currently retained is preview robots middleware so non-production preview deployments can be marked `noindex`.
+
+## Verification model
+
+Each file gets a SHA-256 hash. In the product copy this is also called the **file fingerprint** so the user can understand what value is being preserved.
+
+A matching SHA-256 fingerprint shows that two sequences of bytes are identical with extremely high confidence. It does not independently establish original creation time, source, authorship, location, pre-ProofStamp editing history, or truth of the file's contents.
+
+Users should retain the exact original files and, when evidence quality matters, the full email including headers.
+
+See [docs/architecture.md](docs/architecture.md) for the format and verification model.
 
 ## Brand assets
 
 - `public/email-receipt-logo.svg` is the horizontal product logo.
-- `public/proofstamp-email-mark-vector.svg` combines the envelope with the PS seal using vector paths.
+- `public/proofstamp-email-mark-vector.svg` combines a minimal envelope with the official PS seal using vector paths.
 - `public/proofstamp-seal.svg` preserves the official ProofStamp logo.
 
 ## Automated checks
 
-`npm run check` runs unit tests, builds the production site, and runs Playwright browser tests at a 390×844 mobile viewport.
-
-The mobile suite covers automatic hashing, incremental file selection, camera-capture guidance, validation/focus behavior, email/copy/save completion, zero application API requests, verification, clipboard fallback, and minimum touch-target sizing.
+`npm run check` runs unit tests, builds the production site, and runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, validation, camera preservation guidance, visible SHA-256 fingerprint output, and large touch targets.
