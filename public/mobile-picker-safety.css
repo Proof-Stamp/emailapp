@@ -17,7 +17,8 @@
   background: rgba(0, 123, 92, .065);
 }
 
-.capture-safety[hidden] {
+.capture-safety[hidden],
+.capture-safety button[hidden] {
   display: none !important;
 }
 
@@ -35,6 +36,20 @@
 
 .capture-safety .secondary-button {
   min-height: 48px;
+}
+
+.capture-safety .secondary-button:focus-visible {
+  outline: 3px solid rgba(0, 123, 92, .28);
+  outline-offset: 3px;
+}
+
+.capture-safety-saved {
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+}
+
+.capture-safety-saved p {
+  margin-bottom: .15rem;
 }
 
 .save-media-status {

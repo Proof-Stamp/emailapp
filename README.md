@@ -36,7 +36,9 @@ The email provider's received time can provide a practical external record of wh
 
 On Android and other phones, the system file picker may offer Camera, Video, Recorder, Photos & videos, Files, My Files, Documents, or Browse. ProofStamp does not control the order of those system choices.
 
-The create screen therefore explains how to reach both the photo gallery and documents. If the user creates a photo, video, or recording directly from the system picker, ProofStamp also offers a local **Save original copy** action. This copies the exact selected media file through the browser download mechanism so the user is less likely to lose a capture that was handed to the browser without being saved to the normal Photos/Files library.
+The create screen therefore explains how to reach both the photo gallery and documents. ProofStamp records when the picker opens. If an image, video, or audio file comes back with a `lastModified` time from that picker session, it is treated as a likely fresh Camera/Video/Recorder capture and gets a local **Save original copy** action. Existing gallery media with older timestamps and documents do not get that warning.
+
+Browsers do not expose the actual picker source, so this is intentionally a heuristic rather than a provenance claim. When the warning appears, its save action receives focus before Description. After the local save starts, focus moves to Description and the normal ProofStamp flow continues.
 
 That safety copy is local. It is not uploaded to ProofStamp and is not proof or timestamp evidence by itself.
 
@@ -50,7 +52,7 @@ For field use, the intended flow is simple:
 4. Confirm the selected images from the local thumbnail previews.
 5. Remove or add files as needed, then continue.
 
-The system picker can still expose Camera/Video/Recorder. When a user creates media that way, use **Save original copy** before leaving if the phone has not saved it elsewhere.
+The system picker can still expose Camera/Video/Recorder. When ProofStamp detects media that looks newly created during that picker session, use **Save original copy** before leaving if the phone has not saved it elsewhere.
 
 ## Run locally
 
@@ -95,4 +97,4 @@ See [docs/architecture.md](docs/architecture.md) for the format and verification
 
 `npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview.
 
-`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, picker guidance, media-preservation downloads, validation, visible SHA-256 fingerprint output, and large touch targets. GitHub Actions runs this full check on pushes to `main` and can also be started manually while the GitHub-hosted PR runner issue is unresolved.
+`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, picker guidance, fresh-capture preservation, focus handling, downloads, validation, visible SHA-256 fingerprint output, and large touch targets. GitHub Actions runs this full check on pushes to `main` and can also be started manually while the GitHub-hosted PR runner issue is unresolved.
