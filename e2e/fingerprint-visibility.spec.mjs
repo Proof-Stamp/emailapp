@@ -20,5 +20,5 @@ test('ready screen shows the actual SHA-256 hash as the file fingerprint', async
   await expect(page.locator('#receipt-stage')).toBeVisible()
   await expect(page.locator('#receipt-summary')).toContainText('SHA-256 hash / file fingerprint')
   await expect(page.locator('#receipt-summary')).toContainText(expectedHash)
-  await expect(page.locator('.hash-value-note')).toContainText('A match later confirms the exact file has not changed.')
+  await expect(page.locator('.hash-value-note')).toContainText("The SHA-256 hash is the file's unique fingerprint.")
 })
