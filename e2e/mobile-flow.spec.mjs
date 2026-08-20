@@ -155,19 +155,22 @@ test.describe('Concept A mobile flow', () => {
     await expectFocused(page, cc)
   })
 
-  test('moves to Ready and exposes email, copy, save, and attachment guidance', async ({ page }) => {
+  test('moves to ProofStamp ready and exposes email, copy, save, and attachment guidance', async ({ page }) => {
     await chooseAndReady(page)
     await completeRequiredFields(page)
     await page.locator('button[type="submit"]').click()
 
     const readyTitle = page.locator('#receipt-stage-title')
     await expect(page.locator('#receipt-stage')).toBeVisible()
-    await expect(readyTitle).toHaveText('Ready')
+    await expect(readyTitle).toHaveText('ProofStamp ready')
     await expectFocused(page, readyTitle)
-    await expect(page.locator('#open-email')).toHaveText('Open email')
+    await expect(page.locator('.success-intro')).toHaveText('Your ProofStamp is ready to send.')
+    await expect(page.locator('#open-email')).toHaveText('Email ProofStamp')
     await expect(page.locator('#copy-receipt')).toHaveText('Copy ProofStamp')
     await expect(page.locator('#download-receipt')).toHaveText('Save ProofStamp')
-    await expect(page.locator('.attach-note')).toContainText('Optional: attach the original files.')
+    await expect(page.locator('.email-cta-note')).toHaveText('Your email app will open with it ready to send.')
+    await expect(page.locator('.attach-note')).toContainText('Optional: attach the originals.')
+    await expect(page.locator('.attach-note')).toContainText('You attach them in your email app.')
     await expect(page.locator('.offline-note')).toContainText('No connection?')
     await expect(page.locator('#receipt-summary')).not.toContainText('Created at')
   })

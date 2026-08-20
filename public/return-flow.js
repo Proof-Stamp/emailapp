@@ -176,7 +176,7 @@ function ensureReturnUi() {
 
 function showEmailOpenedState({ showReturn = false, desktop = false } = {}) {
   ensureReturnUi()
-  if (openEmailButton) openEmailButton.textContent = 'Open email again'
+  if (openEmailButton) openEmailButton.textContent = 'Email ProofStamp again'
   if (emailStatus) {
     emailStatus.textContent = desktop
       ? 'Email opened separately. Come back here after sending.'
@@ -204,7 +204,7 @@ function restoreState() {
   if (providerCount) providerCount.textContent = savedState.providerCount
 
   const intro = receiptStage.querySelector('.success-intro')
-  if (intro) intro.textContent = 'Open your email and send the ProofStamp.'
+  if (intro) intro.textContent = 'Your ProofStamp is ready to send.'
 
   if (safeSessionGet(EMAIL_OPENED_KEY) === '1') showEmailOpenedState({ showReturn: true })
   return true
@@ -254,8 +254,8 @@ function downloadRestoredReceipt() {
 function handleReceiptVisible() {
   if (!receiptStage || receiptStage.hidden) return
   const intro = receiptStage.querySelector('.success-intro')
-  if (intro) intro.textContent = 'Open your email and send the ProofStamp.'
-  if (openEmailButton && safeSessionGet(EMAIL_OPENED_KEY) !== '1') openEmailButton.textContent = 'Open email'
+  if (intro) intro.textContent = 'Your ProofStamp is ready to send.'
+  if (openEmailButton && safeSessionGet(EMAIL_OPENED_KEY) !== '1') openEmailButton.textContent = 'Email ProofStamp'
   ensureReturnUi()
   if (!restored) captureState()
 }
@@ -263,7 +263,7 @@ function handleReceiptVisible() {
 if (receiptStage) {
   const style = document.createElement('link')
   style.rel = 'stylesheet'
-  style.href = '/return-flow.css?v=0.4.0'
+  style.href = '/return-flow.css?v=0.4.5'
   document.head.append(style)
 
   ensureReturnUi()
