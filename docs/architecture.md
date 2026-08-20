@@ -12,36 +12,38 @@ Creating or verifying a ProofStamp must not require an account, login, ProofStam
 
 ## Product flow
 
-1. The user takes a photo or selects 1–5 existing files.
-2. The browser immediately calculates a SHA-256 fingerprint for each file with Web Crypto.
-3. The user adds one required description and a destination email.
-4. The user can add an optional second recipient.
-5. The app creates one portable ProofStamp.
-6. The user can:
+1. The user takes photos with their normal Camera app or already has files on the device.
+2. The user chooses 1–5 important or illustrative photos/files in ProofStamp.
+3. Image selections are shown as local thumbnail previews so the user can confirm or remove the wrong files.
+4. The browser immediately calculates a SHA-256 fingerprint for each selected file with Web Crypto.
+5. The user adds one required description and a destination email.
+6. The user can add an optional second recipient.
+7. The app creates one portable ProofStamp.
+8. The user can:
    - open their email app with the ProofStamp prepared in the message body,
    - copy the ProofStamp,
    - save the ProofStamp as a local text file.
-7. In the email app, the user may optionally attach the exact original files before sending.
-8. The verification view can check one file, several files, or all files against the fingerprints in the ProofStamp.
+9. In the email app, the user may optionally attach the exact original files before sending.
+10. The verification view can check one file, several files, or all files against the fingerprints in the ProofStamp.
 
-If the user is offline, steps 1–6 remain local. Sending the email can happen later.
+If the user is offline, steps 1–8 remain local. Sending the email can happen later.
 
-## Camera capture and preserving originals
+## Photo selection and previews
 
-On supported mobile browsers, the **Take photo** control uses a standard file input with `accept="image/*"` and `capture="environment"`.
+ProofStamp does not provide an in-browser camera flow.
 
-The browser gives ProofStamp a `File` object containing the captured bytes. The platform does not guarantee that this camera-created file will also be saved into the user's Gallery or Photos library.
+The intended field workflow is to use the phone's normal Camera app, where originals are naturally kept in the normal Gallery/Photos library, then choose the strongest 1–5 images for the ProofStamp.
 
-For that reason, the UI warns users to preserve the original and offers **Save photo**, which downloads the exact captured file locally. Verification later requires the exact original bytes.
+Selected images are previewed with temporary local `blob:` URLs created from the browser `File` objects. These previews never leave the device. Object URLs are revoked when files are removed, the create flow is reset, or the page is left.
 
-Direct camera capture is progressive enhancement. The generic **Choose files** path remains available.
+Non-image files use a simple file indicator instead of a thumbnail.
 
 ## Privacy boundary
 
 File processing remains local to the browser.
 
 - Source files stay on the user's device.
-- Files are read only inside the browser for hashing.
+- Files are read only inside the browser for local previews and hashing.
 - Email addresses are used only to construct the local `mailto:` URL.
 - No file contents, fingerprints, filenames, descriptions, email addresses, or file metadata are sent to ProofStamp.
 - No registration, login, cookie-based identity, or proof storage is required.
@@ -54,7 +56,7 @@ The return-from-email convenience stores the current ProofStamp and delivery fie
 
 Every selected file gets its own SHA-256 fingerprint. A multi-file ProofStamp is one description plus a list of individual fingerprints.
 
-Hashing begins automatically after selection. SHA-256 is an implementation detail users can inspect under **Proof details**, not a separate task they must initiate.
+Hashing begins automatically after selection. The actual **SHA-256 hash / file fingerprint** remains visible in the ready screen and generated ProofStamp because it is the core proof value, not just an implementation detail.
 
 ## ProofStamp format
 
@@ -72,10 +74,10 @@ https://email.proofstamp.org/verify
 
 FILES
 1. IMG_7123.jpg · 2.4 MB
-SHA-256: <64 hexadecimal characters>
+SHA-256 hash / file fingerprint: <64 hexadecimal characters>
 
 2. IMG_7124.jpg · 2.1 MB
-SHA-256: <64 hexadecimal characters>
+SHA-256 hash / file fingerprint: <64 hexadecimal characters>
 
 Keep the exact original files. Matching fingerprints later confirm the files have not changed.
 
