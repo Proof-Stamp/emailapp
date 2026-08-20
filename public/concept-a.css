@@ -167,6 +167,32 @@
   margin-top: .25rem;
 }
 
+#receipt-summary dd {
+  overflow-wrap: anywhere;
+}
+
+#receipt-summary .receipt-hash-label {
+  color: var(--green-dark, #00644b);
+  font-weight: 800;
+}
+
+#receipt-summary .receipt-hash {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.hash-value-note {
+  margin: 0;
+  padding: .8rem 1rem 1rem;
+  border-top: 1px solid rgba(7, 27, 44, .08);
+  color: var(--muted, #5f6b73);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+
 .final-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -313,6 +339,10 @@
 
   .checkbox-row {
     min-height: 48px;
+  }
+
+  #receipt-summary .receipt-hash {
+    font-size: .78rem;
   }
 
   .final-actions {
