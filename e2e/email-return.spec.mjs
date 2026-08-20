@@ -26,8 +26,8 @@ test.describe('email app return flow', () => {
 
     await createProofstamp(page)
 
-    await expect(page.locator('#open-email')).toHaveText('Open email')
-    await expect(page.locator('.success-intro')).toHaveText('Open your email and send the ProofStamp.')
+    await expect(page.locator('#open-email')).toHaveText('Email ProofStamp')
+    await expect(page.locator('.success-intro')).toHaveText('Your ProofStamp is ready to send.')
     await expect.poll(() => page.evaluate(() => Boolean(sessionStorage.getItem('proofstamp.currentReceipt.v2')))).toBe(true)
 
     await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v2', '1'))
@@ -36,7 +36,7 @@ test.describe('email app return flow', () => {
     await expect(page.locator('#receipt-stage')).toBeVisible()
     await expect(page.locator('#receipt-summary')).toContainText('Apartment condition before moving out')
     await expect(page.locator('#receipt-summary')).toContainText('person@example.com')
-    await expect(page.locator('#open-email')).toHaveText('Open email again')
+    await expect(page.locator('#open-email')).toHaveText('Email ProofStamp again')
     await expect(page.locator('#email-return')).toBeVisible()
     await expect(page.locator('#email-return')).toContainText('Back from email?')
 
@@ -74,6 +74,7 @@ test.describe('email app return flow', () => {
     expect(body).toContain('The email received time shows when this ProofStamp reached the inbox.')
     expect(body).not.toContain('Created at:')
 
+    await expect(page.locator('#open-email')).toHaveText('Email ProofStamp again')
     await expect(page.locator('#email-status')).toContainText('Email opened separately')
     await expect(page.locator('#email-return')).toBeVisible()
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('proofstamp.emailOpened.v2'))).toBe('1')
