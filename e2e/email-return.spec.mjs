@@ -6,21 +6,10 @@ const photo = {
   buffer: Buffer.from('proofstamp-email-return-photo')
 }
 
-async function createProofstamp(page, metrics = null, options = {}) {
-  if (metrics) {
-    await page.route('**/api/metrics', async (route) => {
-      metrics.push(JSON.parse(route.request().postData() || '{}'))
-      await route.fulfill({ status: 204, body: '' })
-    })
-  } else {
-    await page.route('**/api/metrics', async (route) => {
-      await route.fulfill({ status: 204, body: '' })
-    })
-  }
-
+async function createProofstamp(page, options = {}) {
   await page.goto('/')
   await page.locator('#file-input').setInputFiles(options.photo || photo)
-  await page.locator('#hash-file').click()
+  await expect(page.locator('#details-stage')).toBeVisible()
   await page.locator('#description').fill(options.description || 'Apartment condition before moving out')
   await page.locator('#primary-email').fill('person@example.com')
   await page.locator('button[type="submit"]').click()
@@ -28,33 +17,38 @@ async function createProofstamp(page, metrics = null, options = {}) {
 }
 
 test.describe('email app return flow', () => {
-  test('keeps the ProofStamp across a return or reload', async ({ page }) => {
+  test('keeps the ProofStamp across a return or reload without a server', async ({ page }) => {
+    const apiRequests = []
+    await page.route('**/api/**', async (route) => {
+      apiRequests.push(route.request().url())
+      await route.fulfill({ status: 204, body: '' })
+    })
+
     await createProofstamp(page)
 
-    await expect(page.locator('#open-email')).toHaveText('Open email app')
-    await expect(page.locator('.success-intro')).toHaveText('Open your email app, send the ProofStamp, then come back here.')
-    await expect.poll(() => page.evaluate(() => Boolean(sessionStorage.getItem('proofstamp.currentReceipt.v1')))).toBe(true)
+    await expect(page.locator('#open-email')).toHaveText('Open email')
+    await expect(page.locator('.success-intro')).toHaveText('Open your email and send the ProofStamp.')
+    await expect.poll(() => page.evaluate(() => Boolean(sessionStorage.getItem('proofstamp.currentReceipt.v2')))).toBe(true)
 
-    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
+    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v2', '1'))
     await page.reload()
 
     await expect(page.locator('#receipt-stage')).toBeVisible()
     await expect(page.locator('#receipt-summary')).toContainText('Apartment condition before moving out')
     await expect(page.locator('#receipt-summary')).toContainText('person@example.com')
-    await expect(page.locator('#open-email')).toHaveText('Open email app again')
-    await expect(page.locator('#email-status')).toContainText('Your ProofStamp will still be waiting')
+    await expect(page.locator('#open-email')).toHaveText('Open email again')
     await expect(page.locator('#email-return')).toBeVisible()
-    await expect(page.locator('#email-return')).toContainText('Back from your email app?')
-    await expect(page.locator('#email-feedback')).toContainText('Did ProofStamp work as expected?')
+    await expect(page.locator('#email-return')).toContainText('Back from email?')
 
     await page.locator('#return-verify').click()
     await expect(page.locator('#verify-panel')).toBeVisible()
     await expect(page.locator('#expected-hash')).toHaveValue(/PROOFSTAMP/)
     await expect(page.locator('#expected-hash')).toHaveValue(/Apartment condition before moving out/)
     await expect(page.locator('#expected-hash')).toHaveValue(/return-photo\.jpg/)
+    expect(apiRequests).toEqual([])
   })
 
-  test('desktop opens email separately and keeps feedback in the ProofStamp tab', async ({ page }) => {
+  test('desktop opens email separately and keeps the ProofStamp tab intact', async ({ page }) => {
     await page.addInitScript(() => {
       window.__proofstampOpenCalls = []
       window.open = (url, target, features) => {
@@ -75,46 +69,21 @@ test.describe('email app return flow', () => {
     expect(openCalls[0].target).toBe('_blank')
     expect(openCalls[0].features).toContain('noopener')
 
+    const mailto = new URL(openCalls[0].url)
+    const body = mailto.searchParams.get('body')
+    expect(body).toContain('The email received time shows when this ProofStamp reached the inbox.')
+    expect(body).not.toContain('Created at:')
+
     await expect(page.locator('#email-status')).toContainText('Email opened separately')
     await expect(page.locator('#email-return')).toBeVisible()
-    await expect(page.locator('#email-return > strong')).toHaveText('After sending the email')
-    await expect(page.locator('#email-return > p')).toContainText('Come back to this tab')
-    await expect(page.locator('.email-feedback-actions')).toBeVisible()
-    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('proofstamp.emailOpened.v1'))).toBe('1')
+    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('proofstamp.emailOpened.v2'))).toBe('1')
   })
 
-  test('records one anonymous Not quite response without leaving stuck buttons', async ({ page }) => {
-    const metrics = []
-    await createProofstamp(page, metrics)
-    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
+  test('a new ProofStamp gets a fresh local return state in the same session', async ({ page }) => {
+    await createProofstamp(page)
+    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v2', '1'))
     await page.reload()
-
-    await page.locator('#feedback-no').click()
-    await expect.poll(() => metrics.filter((metric) => metric.event === 'feedback_no').length).toBe(1)
-    const feedbackMetric = metrics.find((metric) => metric.event === 'feedback_no')
-    expect(feedbackMetric?.event).toBe('feedback_no')
-    expect(feedbackMetric).not.toHaveProperty('fileName')
-    expect(feedbackMetric).not.toHaveProperty('hash')
-    expect(feedbackMetric).not.toHaveProperty('email')
-
-    await expect(page.locator('.email-feedback-actions')).toBeHidden()
-    await expect(page.locator('#feedback-message')).toContainText('A short note would help us fix it')
-    await expect(page.locator('#feedback-detail')).toBeVisible()
-    await expect(page.locator('#feedback-detail')).toHaveAttribute('href', /mailto:info@proofstamp\.org\?subject=ProofStamp%20feedback/)
-
-    await page.reload()
-    await expect(page.locator('.email-feedback-actions')).toBeHidden()
-    await expect(page.locator('#feedback-detail')).toBeVisible()
-    expect(metrics.filter((metric) => metric.event === 'feedback_no')).toHaveLength(1)
-  })
-
-  test('a new ProofStamp gets a fresh feedback choice in the same mobile session', async ({ page }) => {
-    const metrics = []
-    await createProofstamp(page, metrics)
-    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
-    await page.reload()
-    await page.locator('#feedback-no').click()
-    await expect(page.locator('.email-feedback-actions')).toBeHidden()
+    await expect(page.locator('#email-return')).toBeVisible()
 
     await page.locator('#return-create').click()
     await expect(page.locator('#file-stage')).toBeVisible()
@@ -125,55 +94,30 @@ test.describe('email app return flow', () => {
       buffer: Buffer.from('proofstamp-second-email-return-photo')
     }
     await page.locator('#file-input').setInputFiles(secondPhoto)
-    await page.locator('#hash-file').click()
+    await expect(page.locator('#details-stage')).toBeVisible()
     await page.locator('#description').fill('Second ProofStamp in the same session')
     await page.locator('#primary-email').fill('person@example.com')
     await page.locator('button[type="submit"]').click()
     await expect(page.locator('#receipt-stage')).toBeVisible()
 
-    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v1', '1'))
-    await page.reload()
-
-    await expect(page.locator('.email-feedback-actions')).toBeVisible()
-    await expect(page.locator('#feedback-yes')).toBeEnabled()
-    await expect(page.locator('#feedback-no')).toBeEnabled()
-
-    await page.locator('#feedback-yes').click()
-    await expect.poll(() => metrics.filter((metric) => metric.event === 'feedback_yes').length).toBe(1)
-    await expect(page.locator('.email-feedback-actions')).toBeHidden()
-    await expect(page.locator('#feedback-message')).toContainText('Thanks. That helps.')
+    const state = await page.evaluate(() => JSON.parse(sessionStorage.getItem('proofstamp.currentReceipt.v2') || '{}'))
+    expect(state.receipt.description).toBe('Second ProofStamp in the same session')
+    expect(state.receipt).not.toHaveProperty('created_at_device')
   })
 
-  test('does not double-count an email app open after reload', async ({ page }) => {
-    const metrics = []
-    await page.route('**/api/metrics', async (route) => {
-      metrics.push(JSON.parse(route.request().postData() || '{}'))
-      await route.fulfill({ status: 204, body: '' })
+  test('restored clipboard failure shows a visible fallback', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async () => { throw new Error('blocked') } }
+      })
     })
 
-    const openSameReceipt = () => page.evaluate(async () => {
-      const { createMailtoUrl } = await import('/receipt.js')
-      const receipt = {
-        description: 'Return flow test',
-        files: [{
-          hash: 'b'.repeat(64),
-          file_name: 'return.jpg',
-          file_size_bytes: 123,
-          media_type: 'image/jpeg'
-        }],
-        created_at_device: '2026-08-19T19:30:00.000Z',
-        verification_url: 'https://email.proofstamp.org/verify'
-      }
-      createMailtoUrl({ receipt, primaryEmail: 'person@example.com' })
-    })
-
-    await page.goto('/')
-    await openSameReceipt()
-    await expect.poll(() => metrics.filter((metric) => metric.event === 'email_opened').length).toBe(1)
-
+    await createProofstamp(page)
+    await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v2', '1'))
     await page.reload()
-    await openSameReceipt()
-    await page.waitForTimeout(100)
-    expect(metrics.filter((metric) => metric.event === 'email_opened')).toHaveLength(1)
+    await page.locator('#copy-receipt').click()
+
+    await expect(page.locator('[data-proofstamp-toast]')).toContainText('Use Save ProofStamp instead')
   })
 })
