@@ -399,19 +399,30 @@ function renderReceipt() {
   const receipt = publicReceipt()
   const { primaryEmail, secondEmail } = currentReceipt._delivery
   const totalSize = receipt.files.reduce((sum, file) => sum + file.file_size_bytes, 0)
+  const hashValue = receipt.files.length === 1
+    ? receipt.files[0].hash
+    : receipt.files.map((file, index) => `${index + 1}. ${file.file_name || `File ${index + 1}`}\n${file.hash}`).join('\n\n')
+  const hashLabel = receipt.files.length === 1
+    ? 'SHA-256 hash / file fingerprint'
+    : 'SHA-256 hashes / file fingerprints'
   const rows = [
     ['To', primaryEmail],
     ...(secondEmail ? [['CC', secondEmail]] : []),
     ['Description', receipt.description],
     ['Files', receipt.files.length === 1 ? '1 file' : `${receipt.files.length} files`],
     ...(receipt.files.length === 1 && receipt.files[0].file_name ? [['Filename', receipt.files[0].file_name]] : []),
-    [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)]
+    [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
+    [hashLabel, hashValue]
   ]
   els.receiptSummary.replaceChildren(...rows.flatMap(([key, value]) => {
     const dt = document.createElement('dt')
     const dd = document.createElement('dd')
     dt.textContent = key
     dd.textContent = value
+    if (key.startsWith('SHA-256')) {
+      dt.classList.add('receipt-hash-label')
+      dd.classList.add('receipt-hash')
+    }
     return [dt, dd]
   }))
   els.providerCount.textContent = secondEmail ? '2 email addresses' : '1 email address'
