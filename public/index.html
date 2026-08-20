@@ -9,7 +9,7 @@
       content="Create a private ProofStamp for photos and files on your device, then email, copy, or save it. No upload. No account."
     />
     <title>ProofStamp for Photos and Files</title>
-    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.0" type="image/svg+xml" />
+    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.1" type="image/svg+xml" />
     <link
       rel="preload"
       href="/fonts/source-serif-4-latin-variable.woff2"
@@ -17,16 +17,16 @@
       type="font/woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/styles.css?v=0.4.0" />
-    <link rel="stylesheet" href="/ux.css?v=0.4.0" />
-    <link rel="stylesheet" href="/concept-a.css?v=0.4.0" />
+    <link rel="stylesheet" href="/styles.css?v=0.4.1" />
+    <link rel="stylesheet" href="/ux.css?v=0.4.1" />
+    <link rel="stylesheet" href="/concept-a.css?v=0.4.1" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
 
     <header class="site-header compact-header">
       <a class="brand" href="/" aria-label="ProofStamp home">
-        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.0" width="41" height="41" alt="" />
+        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.1" width="41" height="41" alt="" />
         <span class="brand-copy">
           <strong>ProofStamp</strong>
           <small>via email</small>
@@ -102,10 +102,10 @@
             </div>
 
             <details class="proof-details">
-              <summary>Proof details</summary>
+              <summary>SHA-256 hash / file fingerprint</summary>
               <div class="hash-card compact-hash-card">
                 <div class="hash-heading">
-                  <span>SHA-256 fingerprints</span>
+                  <span>SHA-256 hashes / file fingerprints</span>
                   <button id="copy-hash" class="small-button" type="button">Copy</button>
                 </div>
                 <code id="hash-value"></code>
@@ -167,6 +167,7 @@
                 <span id="receipt-provider-count">1 email address</span>
               </div>
               <dl id="receipt-summary"></dl>
+              <p class="hash-value-note">The SHA-256 hash is the file fingerprint. A match later confirms the exact file has not changed.</p>
             </div>
 
             <div class="action-grid final-actions">
@@ -235,8 +236,8 @@
         <div class="explanation-grid">
           <article>
             <span class="explanation-number">01</span>
-            <h3>Fingerprint locally</h3>
-            <p>Your browser creates a <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">SHA-256</a> fingerprint. The file is not uploaded.</p>
+            <h3>Create the file fingerprint</h3>
+            <p>Your browser creates a <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">SHA-256 hash</a>, a unique fingerprint for the file. The file is not uploaded.</p>
           </article>
           <article>
             <span class="explanation-number">02</span>
@@ -260,7 +261,7 @@
     </main>
 
     <footer class="site-footer">
-      <span>ProofStamp · v0.4.0</span>
+      <span>ProofStamp · v0.4.1</span>
       <nav aria-label="Footer navigation">
         <a href="mailto:info@proofstamp.org?subject=ProofStamp%20feedback">Feedback</a>
         <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">Learn about SHA-256</a>
@@ -273,7 +274,7 @@
       <div class="noscript-note">ProofStamp needs JavaScript to calculate SHA-256 on your device. Your files are not uploaded.</div>
     </noscript>
 
-    <script type="module" src="/app.js?v=0.4.0"></script>
-    <script type="module" src="/return-flow.js?v=0.4.0"></script>
+    <script type="module" src="/app.js?v=0.4.1"></script>
+    <script type="module" src="/return-flow.js?v=0.4.1"></script>
   </body>
 </html>
