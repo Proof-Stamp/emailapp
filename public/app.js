@@ -9,9 +9,8 @@ import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEma
 const $ = (selector) => document.querySelector(selector)
 const els = {
   createTab: $('#create-tab'), verifyTab: $('#verify-tab'), createPanel: $('#create-panel'), verifyPanel: $('#verify-panel'),
-  createAlert: $('#create-alert'), cameraInput: $('#camera-input'), fileInput: $('#file-input'), captureActions: $('#capture-actions'),
-  dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'), addMoreActions: $('#add-more-actions'), addCamera: $('#add-camera'),
-  addMoreFiles: $('#add-more-files'), hashStatus: $('#hash-status'), cameraSaveNote: $('#camera-save-note'), saveCameraFiles: $('#save-camera-files'),
+  createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'),
+  addMoreFiles: $('#add-more-files'), hashStatus: $('#hash-status'),
   fileStage: $('#file-stage'), detailsStage: $('#details-stage'), receiptStage: $('#receipt-stage'), startOver: $('#start-over'),
   hashValue: $('#hash-value'), copyHash: $('#copy-hash'), receiptForm: $('#receipt-form'), description: $('#description'),
   descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'), secondEmailField: $('#second-email-field'),
@@ -28,9 +27,9 @@ let selectedFiles = []
 let selectedVerifyFiles = []
 let currentFileProofs = []
 let currentReceipt = null
-let capturedFileKeys = new Set()
 let hashFailures = new Set()
 let hashGeneration = 0
+const previewUrls = new Map()
 
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
@@ -178,14 +177,42 @@ function duplicateSelectionCopy(count) {
   return `${count === 1 ? 'That file is' : `${count} files are`} already selected.`
 }
 
-function makeFileRow(file, index, onRemove, { failed = false } = {}) {
-  const row = document.createElement('div')
-  row.className = `selected-file${failed ? ' file-failed' : ''}`
+function previewUrl(file) {
+  const key = fileIdentity(file)
+  if (!previewUrls.has(key)) previewUrls.set(key, URL.createObjectURL(file))
+  return previewUrls.get(key)
+}
 
-  const icon = document.createElement('div')
-  icon.className = 'file-icon'
-  icon.setAttribute('aria-hidden', 'true')
-  icon.textContent = file.type?.startsWith('image/') ? 'IMG' : 'FILE'
+function revokePreview(file) {
+  const key = fileIdentity(file)
+  const url = previewUrls.get(key)
+  if (!url) return
+  URL.revokeObjectURL(url)
+  previewUrls.delete(key)
+}
+
+function revokeAllPreviews() {
+  previewUrls.forEach((url) => URL.revokeObjectURL(url))
+  previewUrls.clear()
+}
+
+function makeFileRow(file, index, onRemove, { failed = false, showPreview = false } = {}) {
+  const row = document.createElement('div')
+  row.className = `selected-file${showPreview ? ' preview-file' : ''}${failed ? ' file-failed' : ''}`
+
+  const visual = document.createElement('div')
+  visual.className = showPreview ? 'file-preview' : 'file-icon'
+  visual.setAttribute('aria-hidden', 'true')
+
+  if (showPreview && file.type?.startsWith('image/')) {
+    const image = document.createElement('img')
+    image.className = 'file-thumbnail'
+    image.src = previewUrl(file)
+    image.alt = ''
+    visual.append(image)
+  } else {
+    visual.textContent = file.type?.startsWith('image/') ? 'IMG' : 'FILE'
+  }
 
   const copy = document.createElement('div')
   copy.className = 'file-copy'
@@ -202,12 +229,8 @@ function makeFileRow(file, index, onRemove, { failed = false } = {}) {
   remove.textContent = '×'
   remove.addEventListener('click', () => onRemove(index))
 
-  row.append(icon, copy, remove)
+  row.append(visual, copy, remove)
   return row
-}
-
-function selectedCameraFiles() {
-  return selectedFiles.filter((file) => capturedFileKeys.has(fileIdentity(file)))
 }
 
 function renderCreateFiles() {
@@ -215,20 +238,14 @@ function renderCreateFiles() {
     file,
     index,
     removeCreateFile,
-    { failed: hashFailures.has(fileIdentity(file)) }
+    { failed: hashFailures.has(fileIdentity(file)), showPreview: true }
   )))
 
   const hasFiles = selectedFiles.length > 0
   const canAdd = selectedFiles.length < MAX_FILES_PER_PROOFSTAMP
   els.selectedFiles.hidden = !hasFiles
-  els.captureActions.hidden = hasFiles
-  els.addMoreActions.hidden = !hasFiles
-  els.addCamera.hidden = !canAdd
-  els.addMoreFiles.hidden = !canAdd
-
-  const cameraFiles = selectedCameraFiles()
-  els.cameraSaveNote.hidden = cameraFiles.length === 0
-  els.saveCameraFiles.textContent = cameraFiles.length > 1 ? 'Save photos' : 'Save photo'
+  els.dropZone.hidden = hasFiles
+  els.addMoreFiles.hidden = !hasFiles || !canAdd
 }
 
 function setHashStatus(message) {
@@ -236,11 +253,10 @@ function setHashStatus(message) {
   els.hashStatus.hidden = !message
 }
 
-async function acceptFiles(fileList, { source = 'files' } = {}) {
+async function acceptFiles(fileList) {
   showAlert(els.createAlert, '')
   const result = mergeFileSelection(selectedFiles, fileList)
   els.fileInput.value = ''
-  els.cameraInput.value = ''
 
   if (result.error) {
     showAlert(els.createAlert, `${result.error}${previousSelectionCopy(selectedFiles)}`, { move: true })
@@ -249,7 +265,6 @@ async function acceptFiles(fileList, { source = 'files' } = {}) {
 
   if (result.added) {
     selectedFiles = result.files
-    if (source === 'camera') result.additions.forEach((file) => capturedFileKeys.add(fileIdentity(file)))
     currentReceipt = null
   }
 
@@ -261,8 +276,8 @@ async function acceptFiles(fileList, { source = 'files' } = {}) {
 async function removeCreateFile(index) {
   const [removed] = selectedFiles.splice(index, 1)
   if (removed) {
+    revokePreview(removed)
     const key = fileIdentity(removed)
-    capturedFileKeys.delete(key)
     hashFailures.delete(key)
     currentFileProofs = currentFileProofs.filter(({ file }) => fileIdentity(file) !== key)
   }
@@ -282,18 +297,16 @@ async function removeCreateFile(index) {
 
 function resetCreate({ move = true } = {}) {
   hashGeneration += 1
+  revokeAllPreviews()
   selectedFiles = []
   currentFileProofs = []
   currentReceipt = null
-  capturedFileKeys = new Set()
   hashFailures = new Set()
   els.fileInput.value = ''
-  els.cameraInput.value = ''
   els.selectedFiles.replaceChildren()
   els.selectedFiles.hidden = true
-  els.captureActions.hidden = false
-  els.addMoreActions.hidden = true
-  els.cameraSaveNote.hidden = true
+  els.dropZone.hidden = false
+  els.addMoreFiles.hidden = true
   els.fileStage.hidden = false
   els.detailsStage.hidden = true
   els.receiptStage.hidden = true
@@ -461,17 +474,6 @@ function downloadReceipt() {
   triggerDownload(new Blob([receiptToText(receipt)], { type: 'text/plain;charset=utf-8' }), `proofstamp-${keyHash.slice(0, 12)}.txt`)
 }
 
-function saveCameraFiles() {
-  const cameraFiles = selectedCameraFiles()
-  if (!cameraFiles.length) return
-  cameraFiles.forEach((file, index) => {
-    setTimeout(() => triggerDownload(file, file.name || `proofstamp-photo-${index + 1}.jpg`), index * 180)
-  })
-  showToast(cameraFiles.length > 1
-    ? 'Downloads started. Your browser may ask to allow multiple files.'
-    : 'Download started. Keep that exact photo.')
-}
-
 function renderVerifyFiles() {
   els.verifySelectedFiles.replaceChildren(...selectedVerifyFiles.map((file, index) => makeFileRow(file, index, removeVerifyFile)))
   const hasFiles = selectedVerifyFiles.length > 0
@@ -569,16 +571,14 @@ async function verify() {
 
 els.createTab.addEventListener('click', () => switchTab('create'))
 els.verifyTab.addEventListener('click', () => switchTab('verify'))
-els.cameraInput.addEventListener('change', () => acceptFiles(els.cameraInput.files, { source: 'camera' }))
-els.fileInput.addEventListener('change', () => acceptFiles(els.fileInput.files, { source: 'files' }))
+els.fileInput.addEventListener('change', () => acceptFiles(els.fileInput.files))
 els.dropZone.addEventListener('dragover', (event) => { event.preventDefault(); els.dropZone.classList.add('dragging') })
 els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('dragging'))
 els.dropZone.addEventListener('drop', (event) => {
   event.preventDefault()
   els.dropZone.classList.remove('dragging')
-  acceptFiles(event.dataTransfer.files, { source: 'files' })
+  acceptFiles(event.dataTransfer.files)
 })
-els.saveCameraFiles.addEventListener('click', saveCameraFiles)
 els.startOver.addEventListener('click', () => resetCreate({ move: true }))
 els.description.addEventListener('input', () => {
   els.descriptionCount.textContent = `${els.description.value.length} / 500`
@@ -607,5 +607,6 @@ els.verifyDropZone.addEventListener('drop', (event) => {
   acceptVerifyFiles(event.dataTransfer.files)
 })
 els.verifyButton.addEventListener('click', verify)
+window.addEventListener('pagehide', revokeAllPreviews)
 
 if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify', { move: true })
