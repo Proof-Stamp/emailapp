@@ -1,9 +1,8 @@
 import { MAX_FILES_PER_PROOFSTAMP, isSha256 } from './hash.js'
-import { trackEmailAppOpened, trackProofCreated } from './metrics.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
-export const RECEIPT_VERSION = '2.0'
-export const APP_VERSION = '0.3.12'
+export const RECEIPT_VERSION = '2.1'
+export const APP_VERSION = '0.4.0'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
@@ -14,6 +13,7 @@ export function formatBytes(bytes) {
   return `${(bytes / (1024 ** index)).toFixed(index ? 1 : 0)} ${units[index]}`
 }
 
+// Kept for backwards-compatible imports and parsing of older ProofStamps.
 export function formatReceiptDate(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -66,8 +66,7 @@ export function createReceipt({
   includeFilename = true,
   fileSizeBytes,
   mediaType,
-  files,
-  createdAtDevice = new Date().toISOString()
+  files
 }) {
   if (!description.trim()) throw new TypeError('A description is required.')
 
@@ -79,20 +78,15 @@ export function createReceipt({
     throw new TypeError(`Choose between 1 and ${MAX_FILES_PER_PROOFSTAMP} files.`)
   }
 
-  const normalizedFiles = sourceFiles.map((file) => normalizeFile(file, includeFilename))
-  const receipt = {
+  return {
     schema: RECEIPT_SCHEMA,
     version: RECEIPT_VERSION,
     hash_algorithm: 'SHA-256',
     description: description.trim(),
-    files: normalizedFiles,
-    created_at_device: createdAtDevice,
+    files: sourceFiles.map((file) => normalizeFile(file, includeFilename)),
     verification_url: VERIFICATION_URL,
     app_version: APP_VERSION
   }
-
-  trackProofCreated(receipt)
-  return receipt
 }
 
 export function receiptToText(receipt) {
@@ -102,7 +96,7 @@ export function receiptToText(receipt) {
   const plural = files.length > 1
   const lines = [
     'PROOFSTAMP', '',
-    `Here is a ProofStamp for ${receipt.description}.`, '',
+    `ProofStamp for: ${receipt.description}`, '',
     plural ? 'VERIFY THE FILES' : 'VERIFY THE FILE',
     receipt.verification_url || VERIFICATION_URL, '',
     plural ? 'FILES' : 'FILE'
@@ -117,13 +111,14 @@ export function receiptToText(receipt) {
   })
 
   lines.push(
-    `Created at: ${formatReceiptDate(receipt.created_at_device)}`, '',
+    '',
     plural
-      ? 'Keep the original files. If their fingerprints match this ProofStamp later, the files have not changed.'
-      : 'Keep the original file. If its fingerprint matches this ProofStamp later, the file has not changed.', '',
+      ? 'Keep the exact original files. Matching fingerprints later confirm the files have not changed.'
+      : 'Keep the exact original file. A matching fingerprint later confirms the file has not changed.', '',
     'The email received time shows when this ProofStamp reached the inbox.', '',
-    `Free. Private. No registration. Your ${plural ? 'files stay' : 'file stays'} on your device.`, '',
-    'Create your own ProofStamp →',
+    'ProofStamp does not prove when or where a file was created, who made it, or whether its contents are true.', '',
+    'No upload. No account. Files stay on your device.', '',
+    'Create a ProofStamp:',
     CREATE_URL
   )
 
@@ -145,7 +140,6 @@ export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
     `body=${encodeMailtoBody(receiptToText(receipt))}`
   ]
   if (secondEmail) params.push(`cc=${encodeURIComponent(secondEmail)}`)
-  trackEmailAppOpened(receipt)
   return `mailto:${encodeURIComponent(primaryEmail)}?${params.join('&')}`
 }
 
