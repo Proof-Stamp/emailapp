@@ -16,17 +16,17 @@ test('crawler files point search engines at the canonical production URL', async
 
   assert.match(robots, /User-agent: \*/)
   assert.match(robots, /Sitemap: https:\/\/email\.proofstamp\.org\/sitemap\.xml/)
-  assert.match(robots, /Disallow: \/api\//)
+  assert.doesNotMatch(robots, /\/api\//)
   assert.match(sitemap, /<loc>https:\/\/email\.proofstamp\.org\/<\/loc>/)
   assert.doesNotMatch(sitemap, /\/stats|\/verify|\/api\//)
 })
 
-test('utility routes are explicitly excluded from search results', async () => {
+test('verification is excluded from search and runtime network connections are disabled', async () => {
   const headers = await readFile(headersPath, 'utf8')
 
   assert.match(headers, /\/verify[\s\S]*X-Robots-Tag: noindex, follow/)
-  assert.match(headers, /\/stats[\s\S]*X-Robots-Tag: noindex, follow/)
-  assert.match(headers, /\/api\/\*[\s\S]*X-Robots-Tag: noindex, nofollow/)
+  assert.match(headers, /connect-src 'none'/)
+  assert.doesNotMatch(headers, /\/stats|\/api\/\*/)
 })
 
 test('production build injects canonical, social and structured metadata', async () => {
