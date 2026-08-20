@@ -65,7 +65,7 @@ For Cloudflare Pages:
 - Output directory: `dist`
 - Node version: `22`
 
-The project is a static client. The only Cloudflare Pages Function currently retained is preview robots middleware so non-production preview deployments can be marked `noindex`.
+`npm run build` runs the Node unit/security/version tests before generating `dist`. That means a Cloudflare preview deployment fails if those tests fail. The project remains a static client. The only Cloudflare Pages Function currently retained is preview robots middleware so non-production preview deployments can be marked `noindex`.
 
 ## Verification model
 
@@ -85,4 +85,6 @@ See [docs/architecture.md](docs/architecture.md) for the format and verification
 
 ## Automated checks
 
-`npm run check` runs unit tests, builds the production site, and runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, validation, visible SHA-256 fingerprint output, and large touch targets.
+`npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview.
+
+`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, validation, visible SHA-256 fingerprint output, and large touch targets. GitHub Actions runs this full check on pushes to `main` and can also be started manually while the GitHub-hosted PR runner issue is unresolved.

@@ -1,3 +1,4 @@
+import './thumbnail-preview.js'
 import { createMailtoUrl, receiptToText } from './receipt.js'
 
 const RECEIPT_KEY = 'proofstamp.currentReceipt.v2'
