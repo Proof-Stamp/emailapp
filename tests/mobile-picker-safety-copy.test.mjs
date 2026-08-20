@@ -10,8 +10,8 @@ test('mobile picker guidance keeps photo and document routes explicit', () => {
   assert.match(html, /Files, My Files, Documents, or Browse/)
 })
 
-test('mobile-created media gets a preservation warning and save action', () => {
-  assert.match(html, /Just used Camera, Video, or Recorder\?/)
-  assert.match(html, /Save an original copy before leaving/)
+test('fresh mobile captures get a preservation warning and save action', () => {
+  assert.match(html, /New camera or recorder file/)
+  assert.match(html, /Save the original before continuing/)
   assert.match(html, /id="save-selected-media"/)
 })
