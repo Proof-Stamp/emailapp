@@ -9,7 +9,9 @@ import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEma
 const $ = (selector) => document.querySelector(selector)
 const els = {
   createTab: $('#create-tab'), verifyTab: $('#verify-tab'), createPanel: $('#create-panel'), verifyPanel: $('#verify-panel'),
-  createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'), addMoreFiles: $('#add-more-files'), hashFile: $('#hash-file'),
+  createAlert: $('#create-alert'), cameraInput: $('#camera-input'), fileInput: $('#file-input'), captureActions: $('#capture-actions'),
+  dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'), addMoreActions: $('#add-more-actions'), addCamera: $('#add-camera'),
+  addMoreFiles: $('#add-more-files'), hashStatus: $('#hash-status'), cameraSaveNote: $('#camera-save-note'), saveCameraFiles: $('#save-camera-files'),
   fileStage: $('#file-stage'), detailsStage: $('#details-stage'), receiptStage: $('#receipt-stage'), startOver: $('#start-over'),
   hashValue: $('#hash-value'), copyHash: $('#copy-hash'), receiptForm: $('#receipt-form'), description: $('#description'),
   descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'), secondEmailField: $('#second-email-field'),
@@ -26,6 +28,9 @@ let selectedFiles = []
 let selectedVerifyFiles = []
 let currentFileProofs = []
 let currentReceipt = null
+let capturedFileKeys = new Set()
+let hashFailures = new Set()
+let hashGeneration = 0
 
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
@@ -35,14 +40,11 @@ function moveTo(element, { focus = false, block = 'center' } = {}) {
   if (!element) return
   requestAnimationFrame(() => {
     if (focus) {
-      const naturallyFocusable = element.matches('a, button, input, textarea, select, [tabindex]')
+      const naturallyFocusable = element.matches('a, button, input, textarea, select, summary, [tabindex]')
       if (!naturallyFocusable) element.setAttribute('tabindex', '-1')
       element.focus({ preventScroll: true })
     }
-    element.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block
-    })
+    element.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block })
   })
 }
 
@@ -59,19 +61,9 @@ function showToast(message) {
   toast.setAttribute('role', 'alert')
   toast.textContent = message
   Object.assign(toast.style, {
-    position: 'fixed',
-    left: '50%',
-    bottom: '1rem',
-    zIndex: '1000',
-    maxWidth: 'calc(100% - 2rem)',
-    padding: '.8rem 1rem',
-    borderRadius: '.7rem',
-    background: 'var(--navy)',
-    color: 'white',
-    fontWeight: '700',
-    fontSize: '.85rem',
-    boxShadow: '0 12px 32px rgba(7, 27, 44, .22)',
-    transform: 'translateX(-50%)'
+    position: 'fixed', left: '50%', bottom: '1rem', zIndex: '1000', maxWidth: 'calc(100% - 2rem)',
+    padding: '.8rem 1rem', borderRadius: '.7rem', background: 'var(--navy)', color: 'white', fontWeight: '700',
+    fontSize: '.85rem', boxShadow: '0 12px 32px rgba(7, 27, 44, .22)', transform: 'translateX(-50%)'
   })
   document.body.append(toast)
   setTimeout(() => toast.remove(), 4500)
@@ -114,13 +106,6 @@ function setSecondEmailVisible(visible, { focus = false } = {}) {
   if (visible && focus) moveTo(els.secondEmail, { focus: true, block: 'center' })
 }
 
-function setStep(active) {
-  document.querySelectorAll('.step').forEach((step, index) => {
-    step.classList.toggle('active', index + 1 === active)
-    step.classList.toggle('complete', index + 1 < active)
-  })
-}
-
 function focusPanel(mode) {
   const target = mode === 'create'
     ? els.createPanel.querySelector('#file-stage-title')
@@ -142,9 +127,7 @@ function switchTab(mode, { move = true } = {}) {
 
 function fileValidationMessage(files) {
   if (!files.length) return ''
-  if (files.length > MAX_FILES_PER_PROOFSTAMP) {
-    return `Choose up to ${MAX_FILES_PER_PROOFSTAMP} files at a time.`
-  }
+  if (files.length > MAX_FILES_PER_PROOFSTAMP) return `Choose up to ${MAX_FILES_PER_PROOFSTAMP} files at a time.`
   const tooLarge = files.find((file) => file.size > MAX_FILE_SIZE_BYTES)
   return tooLarge ? `${tooLarge.name} is larger than 50 MB.` : ''
 }
@@ -177,17 +160,12 @@ function mergeFileSelection(current, fileList) {
   const remaining = MAX_FILES_PER_PROOFSTAMP - current.length
   if (additions.length > remaining) {
     const error = remaining > 0
-      ? `You can add ${remaining} more ${remaining === 1 ? 'file' : 'files'} to this ProofStamp.`
+      ? `You can add ${remaining} more ${remaining === 1 ? 'file' : 'files'}.`
       : `You already have ${MAX_FILES_PER_PROOFSTAMP} files selected.`
     return { files: current, added: 0, duplicates, error }
   }
 
-  return {
-    files: [...current, ...additions],
-    added: additions.length,
-    duplicates,
-    error: ''
-  }
+  return { files: [...current, ...additions], additions, added: additions.length, duplicates, error: '' }
 }
 
 function previousSelectionCopy(files) {
@@ -197,30 +175,30 @@ function previousSelectionCopy(files) {
 
 function duplicateSelectionCopy(count) {
   if (!count) return ''
-  return `${count === 1 ? 'That file is' : `${count} files are`} already selected, so ${count === 1 ? 'it was' : 'they were'} not added again.`
+  return `${count === 1 ? 'That file is' : `${count} files are`} already selected.`
 }
 
-function makeFileRow(file, index, onRemove) {
+function makeFileRow(file, index, onRemove, { failed = false } = {}) {
   const row = document.createElement('div')
-  row.className = 'selected-file'
+  row.className = `selected-file${failed ? ' file-failed' : ''}`
 
   const icon = document.createElement('div')
   icon.className = 'file-icon'
   icon.setAttribute('aria-hidden', 'true')
-  icon.textContent = 'FILE'
+  icon.textContent = file.type?.startsWith('image/') ? 'IMG' : 'FILE'
 
   const copy = document.createElement('div')
   copy.className = 'file-copy'
   const name = document.createElement('strong')
-  name.textContent = file.name
+  name.textContent = file.name || 'Photo'
   const meta = document.createElement('span')
-  meta.textContent = `${formatBytes(file.size)}${file.type ? ` · ${file.type}` : ''}`
+  meta.textContent = failed ? 'Could not read this file' : `${formatBytes(file.size)}${file.type ? ` · ${file.type}` : ''}`
   copy.append(name, meta)
 
   const remove = document.createElement('button')
   remove.className = 'icon-button'
   remove.type = 'button'
-  remove.setAttribute('aria-label', `Remove ${file.name}`)
+  remove.setAttribute('aria-label', `Remove ${file.name || 'file'}`)
   remove.textContent = '×'
   remove.addEventListener('click', () => onRemove(index))
 
@@ -228,20 +206,41 @@ function makeFileRow(file, index, onRemove) {
   return row
 }
 
-function renderCreateFiles() {
-  els.selectedFiles.replaceChildren(...selectedFiles.map((file, index) => makeFileRow(file, index, removeCreateFile)))
-  const hasFiles = selectedFiles.length > 0
-  els.selectedFiles.hidden = !hasFiles
-  els.dropZone.hidden = hasFiles
-  els.addMoreFiles.hidden = !hasFiles || selectedFiles.length >= MAX_FILES_PER_PROOFSTAMP
-  els.hashFile.hidden = !hasFiles
-  els.hashFile.textContent = selectedFiles.length === 1 ? 'Create file fingerprint' : `Create ${selectedFiles.length} file fingerprints`
+function selectedCameraFiles() {
+  return selectedFiles.filter((file) => capturedFileKeys.has(fileIdentity(file)))
 }
 
-function acceptFiles(fileList) {
+function renderCreateFiles() {
+  els.selectedFiles.replaceChildren(...selectedFiles.map((file, index) => makeFileRow(
+    file,
+    index,
+    removeCreateFile,
+    { failed: hashFailures.has(fileIdentity(file)) }
+  )))
+
+  const hasFiles = selectedFiles.length > 0
+  const canAdd = selectedFiles.length < MAX_FILES_PER_PROOFSTAMP
+  els.selectedFiles.hidden = !hasFiles
+  els.captureActions.hidden = hasFiles
+  els.addMoreActions.hidden = !hasFiles
+  els.addCamera.hidden = !canAdd
+  els.addMoreFiles.hidden = !canAdd
+
+  const cameraFiles = selectedCameraFiles()
+  els.cameraSaveNote.hidden = cameraFiles.length === 0
+  els.saveCameraFiles.textContent = cameraFiles.length > 1 ? 'Save photos' : 'Save photo'
+}
+
+function setHashStatus(message) {
+  els.hashStatus.textContent = message
+  els.hashStatus.hidden = !message
+}
+
+async function acceptFiles(fileList, { source = 'files' } = {}) {
   showAlert(els.createAlert, '')
   const result = mergeFileSelection(selectedFiles, fileList)
   els.fileInput.value = ''
+  els.cameraInput.value = ''
 
   if (result.error) {
     showAlert(els.createAlert, `${result.error}${previousSelectionCopy(selectedFiles)}`, { move: true })
@@ -250,31 +249,51 @@ function acceptFiles(fileList) {
 
   if (result.added) {
     selectedFiles = result.files
-    currentFileProofs = []
+    if (source === 'camera') result.additions.forEach((file) => capturedFileKeys.add(fileIdentity(file)))
     currentReceipt = null
   }
+
   renderCreateFiles()
   if (result.duplicates) showAlert(els.createAlert, duplicateSelectionCopy(result.duplicates))
+  if (result.added) await calculateHashes({ focusDetails: true })
 }
 
-function removeCreateFile(index) {
-  selectedFiles.splice(index, 1)
-  currentFileProofs = []
+async function removeCreateFile(index) {
+  const [removed] = selectedFiles.splice(index, 1)
+  if (removed) {
+    const key = fileIdentity(removed)
+    capturedFileKeys.delete(key)
+    hashFailures.delete(key)
+    currentFileProofs = currentFileProofs.filter(({ file }) => fileIdentity(file) !== key)
+  }
   currentReceipt = null
-  els.fileInput.value = ''
   renderCreateFiles()
+
+  if (!selectedFiles.length) {
+    currentFileProofs = []
+    hashFailures = new Set()
+    els.detailsStage.hidden = true
+    setHashStatus('')
+    return
+  }
+
+  await calculateHashes({ focusDetails: false })
 }
 
 function resetCreate({ move = true } = {}) {
+  hashGeneration += 1
   selectedFiles = []
   currentFileProofs = []
   currentReceipt = null
+  capturedFileKeys = new Set()
+  hashFailures = new Set()
   els.fileInput.value = ''
+  els.cameraInput.value = ''
   els.selectedFiles.replaceChildren()
   els.selectedFiles.hidden = true
-  els.dropZone.hidden = false
-  els.addMoreFiles.hidden = true
-  els.hashFile.hidden = true
+  els.captureActions.hidden = false
+  els.addMoreActions.hidden = true
+  els.cameraSaveNote.hidden = true
   els.fileStage.hidden = false
   els.detailsStage.hidden = true
   els.receiptStage.hidden = true
@@ -282,45 +301,57 @@ function resetCreate({ move = true } = {}) {
   setSecondEmailVisible(false)
   els.includeFilename.checked = true
   els.descriptionCount.textContent = '0 / 500'
+  els.hashValue.textContent = ''
+  setHashStatus('')
   clearCreateFieldErrors()
   showAlert(els.createAlert, '')
-  setStep(1)
   if (move) moveTo($('#file-stage-title'), { focus: true, block: 'start' })
 }
 
-async function calculateHashes() {
+async function calculateHashes({ focusDetails = false } = {}) {
   if (!selectedFiles.length) return
-  els.hashFile.disabled = true
-  currentFileProofs = []
+
+  const generation = ++hashGeneration
+  const snapshot = [...selectedFiles]
+  const existing = new Map(currentFileProofs.map(({ file, hash }) => [fileIdentity(file), hash]))
+  const proofs = []
+  const failures = new Set()
   showAlert(els.createAlert, '')
+  els.detailsStage.hidden = true
 
-  try {
-    for (let index = 0; index < selectedFiles.length; index += 1) {
-      const file = selectedFiles[index]
-      els.hashFile.textContent = selectedFiles.length === 1
-        ? 'Creating fingerprint…'
-        : `Creating fingerprints… ${index + 1}/${selectedFiles.length}`
-      const hash = await sha256File(file)
-      currentFileProofs.push({ file, hash })
+  for (let index = 0; index < snapshot.length; index += 1) {
+    if (generation !== hashGeneration) return
+    const file = snapshot[index]
+    const key = fileIdentity(file)
+    setHashStatus(snapshot.length === 1 ? 'Creating ProofStamp…' : `Creating ProofStamp… ${index + 1}/${snapshot.length}`)
+
+    try {
+      const hash = existing.get(key) || await sha256File(file)
+      proofs.push({ file, hash })
+    } catch {
+      failures.add(key)
     }
-
-    const fingerprintLines = currentFileProofs.map(
-      ({ file, hash }, index) => `${index + 1}. ${file.name}  ${hash}`
-    )
-    els.hashValue.textContent = fingerprintLines.join('\n')
-    els.hashValue.style.whiteSpace = 'pre-wrap'
-
-    els.fileStage.hidden = true
-    els.detailsStage.hidden = false
-    setStep(2)
-    moveTo(els.description, { focus: true, block: 'center' })
-  } catch {
-    currentFileProofs = []
-    showAlert(els.createAlert, 'This browser could not read one of those files. Try choosing the files again.', { move: true })
-  } finally {
-    els.hashFile.disabled = false
-    els.hashFile.textContent = selectedFiles.length === 1 ? 'Create file fingerprint' : `Create ${selectedFiles.length} file fingerprints`
   }
+
+  if (generation !== hashGeneration) return
+  currentFileProofs = proofs
+  hashFailures = failures
+  renderCreateFiles()
+
+  if (failures.size) {
+    const failedNames = snapshot.filter((file) => failures.has(fileIdentity(file))).map((file) => file.name || 'a file')
+    setHashStatus(`${proofs.length} of ${snapshot.length} files ready`)
+    showAlert(els.createAlert, `Couldn’t read ${failedNames.join(', ')}. Remove ${failures.size > 1 ? 'them' : 'it'} or try again.`, { move: true })
+    return
+  }
+
+  const fingerprintLines = proofs.map(({ file, hash }, index) => `${index + 1}. ${file.name || `File ${index + 1}`}  ${hash}`)
+  els.hashValue.textContent = fingerprintLines.join('\n')
+  els.hashValue.style.whiteSpace = 'pre-wrap'
+  setHashStatus(`${snapshot.length} ${snapshot.length === 1 ? 'file' : 'files'} ready ✓`)
+  els.detailsStage.hidden = false
+
+  if (focusDetails) moveTo(els.description, { focus: true, block: 'center' })
 }
 
 function createReceipt() {
@@ -330,14 +361,14 @@ function createReceipt() {
   clearCreateFieldErrors()
   showAlert(els.createAlert, '')
 
-  if (!description) return showFieldError(els.description, 'Add a short description so you can recognize these files later.')
+  if (!description) return showFieldError(els.description, 'Add a short description.')
   if (!isValidEmail(primaryEmail)) return showFieldError(els.primaryEmail, 'Enter a valid email address.')
   if (secondEmail && !isValidEmail(secondEmail)) return showFieldError(els.secondEmail, 'Enter a valid second email address or remove it.')
   if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
-    return showFieldError(els.secondEmail, 'Use a different address for the second email.')
+    return showFieldError(els.secondEmail, 'Use a different address for the second recipient.')
   }
-  if (!currentFileProofs.length || currentFileProofs.length !== selectedFiles.length) {
-    showAlert(els.createAlert, 'Choose the files and create their fingerprints first.', { move: true })
+  if (hashFailures.size || !currentFileProofs.length || currentFileProofs.length !== selectedFiles.length) {
+    showAlert(els.createAlert, 'Wait until all selected files are ready.', { move: true })
     return
   }
 
@@ -353,9 +384,9 @@ function createReceipt() {
   })
   currentReceipt._delivery = { primaryEmail, secondEmail }
   renderReceipt()
+  els.fileStage.hidden = true
   els.detailsStage.hidden = true
   els.receiptStage.hidden = false
-  setStep(3)
   moveTo($('#receipt-stage-title'), { focus: true, block: 'start' })
 }
 
@@ -374,9 +405,7 @@ function renderReceipt() {
     ['Description', receipt.description],
     ['Files', receipt.files.length === 1 ? '1 file' : `${receipt.files.length} files`],
     ...(receipt.files.length === 1 && receipt.files[0].file_name ? [['Filename', receipt.files[0].file_name]] : []),
-    [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
-    [receipt.files.length === 1 ? 'File fingerprint (SHA-256)' : 'Fingerprints', receipt.files.length === 1 ? receipt.files[0].hash : `${receipt.files.length} individual SHA-256 fingerprints`],
-    ['Created at', new Date(receipt.created_at_device).toLocaleString()]
+    [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)]
   ]
   els.receiptSummary.replaceChildren(...rows.flatMap(([key, value]) => {
     const dt = document.createElement('dt')
@@ -395,24 +424,41 @@ function openEmail() {
 
 async function copyText(text, button, label) {
   try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
     await navigator.clipboard.writeText(text)
     const previous = button.textContent
     button.textContent = label
     setTimeout(() => { button.textContent = previous }, 1500)
   } catch {
-    showToast('Copying was blocked. Select the text and copy it manually.')
+    showToast('Copying was blocked. Use Save ProofStamp instead.')
   }
+}
+
+function triggerDownload(blob, filename) {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  document.body.append(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000)
 }
 
 function downloadReceipt() {
   const receipt = publicReceipt()
   const keyHash = receipt.files[0].hash
-  const blob = new Blob([receiptToText(receipt)], { type: 'text/plain;charset=utf-8' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `proofstamp-${keyHash.slice(0, 12)}.txt`
-  link.click()
-  URL.revokeObjectURL(link.href)
+  triggerDownload(new Blob([receiptToText(receipt)], { type: 'text/plain;charset=utf-8' }), `proofstamp-${keyHash.slice(0, 12)}.txt`)
+}
+
+function saveCameraFiles() {
+  const cameraFiles = selectedCameraFiles()
+  if (!cameraFiles.length) return
+  cameraFiles.forEach((file, index) => {
+    setTimeout(() => triggerDownload(file, file.name || `proofstamp-photo-${index + 1}.jpg`), index * 180)
+  })
+  showToast(cameraFiles.length > 1
+    ? 'Downloads started. Your browser may ask to allow multiple files.'
+    : 'Download started. Keep that exact photo.')
 }
 
 function renderVerifyFiles() {
@@ -447,18 +493,6 @@ function removeVerifyFile(index) {
   renderVerifyFiles()
 }
 
-function resetVerifyFiles() {
-  selectedVerifyFiles = []
-  els.verifyFile.value = ''
-  els.verifySelectedFiles.replaceChildren()
-  els.verifySelectedFiles.hidden = true
-  els.verifyDropZone.hidden = false
-  els.addMoreVerifyFiles.hidden = true
-  els.verifyResult.hidden = true
-  clearFieldError(els.expectedHash)
-  showAlert(els.verifyAlert, '')
-}
-
 async function verify() {
   showAlert(els.verifyAlert, '')
   clearFieldError(els.expectedHash)
@@ -466,10 +500,10 @@ async function verify() {
 
   const expectedHashes = extractProofstampFileHashes(els.expectedHash.value)
   if (!selectedVerifyFiles.length) {
-    showAlert(els.verifyAlert, 'Choose one or more files you want to check.', { move: true })
+    showAlert(els.verifyAlert, 'Choose one or more files to check.', { move: true })
     return
   }
-  if (!expectedHashes.length) return showFieldError(els.expectedHash, 'Paste a valid fingerprint or the full ProofStamp email.')
+  if (!expectedHashes.length) return showFieldError(els.expectedHash, 'Paste a valid fingerprint or ProofStamp email.')
 
   els.verifyButton.disabled = true
   const actual = []
@@ -477,9 +511,7 @@ async function verify() {
   try {
     for (let index = 0; index < selectedVerifyFiles.length; index += 1) {
       const file = selectedVerifyFiles[index]
-      els.verifyButton.textContent = selectedVerifyFiles.length === 1
-        ? 'Checking the file…'
-        : `Checking files… ${index + 1}/${selectedVerifyFiles.length}`
+      els.verifyButton.textContent = selectedVerifyFiles.length === 1 ? 'Checking…' : `Checking… ${index + 1}/${selectedVerifyFiles.length}`
       actual.push({ file, hash: await sha256File(file) })
     }
 
@@ -501,25 +533,23 @@ async function verify() {
     els.verifyResultIcon.textContent = success ? '✓' : '×'
 
     if (success && checkingCompleteSet && actual.length > 1) {
-      els.verifyResultTitle.textContent = `All ${actual.length} files match this ProofStamp`
-      els.verifyResultCopy.textContent = 'The selected files match all fingerprints recorded in this ProofStamp.'
+      els.verifyResultTitle.textContent = `All ${actual.length} files match`
+      els.verifyResultCopy.textContent = 'The selected files match all fingerprints in this ProofStamp.'
     } else if (success && actual.length === 1) {
-      els.verifyResultTitle.textContent = 'This file matches the ProofStamp'
-      els.verifyResultCopy.textContent = 'The file has exactly the same contents as a file recorded in this ProofStamp.'
+      els.verifyResultTitle.textContent = 'This file matches'
+      els.verifyResultCopy.textContent = 'It has exactly the same contents as a file in this ProofStamp.'
     } else if (success) {
-      els.verifyResultTitle.textContent = `All ${actual.length} selected files match this ProofStamp`
+      els.verifyResultTitle.textContent = `All ${actual.length} selected files match`
       els.verifyResultCopy.textContent = 'Every selected file matches a fingerprint in this ProofStamp.'
     } else {
-      els.verifyResultTitle.textContent = `${matchedCount} of ${actual.length} selected files match this ProofStamp`
+      els.verifyResultTitle.textContent = `${matchedCount} of ${actual.length} files match`
       els.verifyResultCopy.textContent = 'A non-matching file is different, changed, or was not part of this ProofStamp.'
     }
 
-    els.actualHash.textContent = results
-      .map(({ file, hash, match }) => `${match ? '✓' : '×'} ${file.name}\n${hash}`)
-      .join('\n\n')
+    els.actualHash.textContent = results.map(({ file, hash, match }) => `${match ? '✓' : '×'} ${file.name}\n${hash}`).join('\n\n')
     moveTo(els.verifyResultTitle, { focus: true, block: 'center' })
   } catch {
-    showAlert(els.verifyAlert, 'This browser could not read one of those files. Try choosing the files again.', { move: true })
+    showAlert(els.verifyAlert, 'This browser could not read one of those files. Try again.', { move: true })
   } finally {
     els.verifyButton.disabled = false
     els.verifyButton.textContent = 'Check files'
@@ -528,15 +558,16 @@ async function verify() {
 
 els.createTab.addEventListener('click', () => switchTab('create'))
 els.verifyTab.addEventListener('click', () => switchTab('verify'))
-els.fileInput.addEventListener('change', () => acceptFiles(els.fileInput.files))
+els.cameraInput.addEventListener('change', () => acceptFiles(els.cameraInput.files, { source: 'camera' }))
+els.fileInput.addEventListener('change', () => acceptFiles(els.fileInput.files, { source: 'files' }))
 els.dropZone.addEventListener('dragover', (event) => { event.preventDefault(); els.dropZone.classList.add('dragging') })
 els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('dragging'))
 els.dropZone.addEventListener('drop', (event) => {
   event.preventDefault()
   els.dropZone.classList.remove('dragging')
-  acceptFiles(event.dataTransfer.files)
+  acceptFiles(event.dataTransfer.files, { source: 'files' })
 })
-els.hashFile.addEventListener('click', calculateHashes)
+els.saveCameraFiles.addEventListener('click', saveCameraFiles)
 els.startOver.addEventListener('click', () => resetCreate({ move: true }))
 els.description.addEventListener('input', () => {
   els.descriptionCount.textContent = `${els.description.value.length} / 500`
@@ -566,6 +597,4 @@ els.verifyDropZone.addEventListener('drop', (event) => {
 })
 els.verifyButton.addEventListener('click', verify)
 
-if (location.pathname.startsWith('/verify') || location.hash === '#verify') {
-  switchTab('verify', { move: true })
-}
+if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify', { move: true })
