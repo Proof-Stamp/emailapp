@@ -2,7 +2,7 @@ import { MAX_FILES_PER_PROOFSTAMP, isSha256 } from './hash.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
 export const RECEIPT_VERSION = '2.1'
-export const APP_VERSION = '0.4.0'
+export const APP_VERSION = '0.4.1'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
@@ -106,7 +106,7 @@ export function receiptToText(receipt) {
     const label = file.file_name || `File ${index + 1}`
     const prefix = plural ? `${index + 1}. ` : ''
     lines.push(`${prefix}${label} · ${formatBytes(file.file_size_bytes)}`)
-    lines.push(`SHA-256: ${file.hash}`)
+    lines.push(`SHA-256 hash / file fingerprint: ${file.hash}`)
     if (index < files.length - 1) lines.push('')
   })
 
