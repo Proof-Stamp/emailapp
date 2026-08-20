@@ -285,6 +285,12 @@
   margin-bottom: .3rem;
 }
 
+/* The verifier heading receives programmatic focus for accessibility. It is not
+   an interactive control, so suppress the browser's default focus rectangle. */
+.compact-verify-intro h2[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .compact-verify-intro p {
   margin: 0;
 }
