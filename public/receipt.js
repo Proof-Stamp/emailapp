@@ -2,7 +2,7 @@ import { MAX_FILES_PER_PROOFSTAMP, isSha256 } from './hash.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
 export const RECEIPT_VERSION = '2.1'
-export const APP_VERSION = '0.4.7'
+export const APP_VERSION = '0.4.8'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
