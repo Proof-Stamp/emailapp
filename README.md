@@ -7,7 +7,8 @@ The core create and verify flows do not require a ProofStamp account, proof data
 ## What the app does
 
 - Hashes 1–5 photos, documents, or other files locally with SHA-256
-- Provides a prominent mobile **Take photo** path plus regular file selection
+- Lets users choose the most useful photos or files from their device rather than taking photos inside ProofStamp
+- Shows local thumbnail previews for selected images so users can confirm or remove the wrong photo before creating the ProofStamp
 - Automatically calculates the SHA-256 hash after files are selected
 - Shows the actual **SHA-256 hash / file fingerprint** in the ready screen and generated ProofStamp
 - Keeps an individual fingerprint for every file
@@ -22,7 +23,8 @@ The core create and verify flows do not require a ProofStamp account, proof data
 ProofStamp is intentionally not a trusted intermediary.
 
 - Source files stay on the user's device.
-- Files are read only inside the browser for hashing.
+- Files are read only inside the browser for previewing and hashing.
+- Image previews use temporary local `blob:` URLs. They are not uploaded.
 - Email addresses are used only to construct a local `mailto:` URL.
 - Creating or checking a ProofStamp requires no ProofStamp API call.
 - New ProofStamps do not include a device-generated creation date as evidence.
@@ -30,11 +32,17 @@ ProofStamp is intentionally not a trusted intermediary.
 
 The email provider's received time can provide a practical external record of when the ProofStamp reached that inbox. ProofStamp itself does not claim to provide a trusted timestamp.
 
-## Camera photos
+## Photo workflow
 
-A browser camera capture is not guaranteed to appear in the device's Gallery/Photos app. When a photo was captured through the ProofStamp camera path, the UI warns the user to preserve the exact original and offers a local **Save photo** action.
+For field use, the intended flow is simple:
 
-No ProofStamp server receives that photo.
+1. Take photos with the phone's normal Camera app.
+2. Review them in the normal Gallery/Photos app.
+3. Choose up to five important or illustrative photos in ProofStamp.
+4. Confirm the selected images from the local thumbnail previews.
+5. Remove or add files as needed, then continue.
+
+This keeps the original photos in the device's normal photo library and avoids turning ProofStamp into a camera app.
 
 ## Run locally
 
@@ -77,4 +85,4 @@ See [docs/architecture.md](docs/architecture.md) for the format and verification
 
 ## Automated checks
 
-`npm run check` runs unit tests, builds the production site, and runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, validation, camera preservation guidance, visible SHA-256 fingerprint output, and large touch targets.
+`npm run check` runs unit tests, builds the production site, and runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, validation, visible SHA-256 fingerprint output, and large touch targets.
