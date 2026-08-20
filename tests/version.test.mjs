@@ -32,3 +32,14 @@ test('package, receipt, source HTML, and build release versions stay in sync', a
   assert.match(buildScript, /ProofStamp · v\$\{appVersion\}/)
   assert.match(buildScript, /\?v=\$\{appVersion\}/)
 })
+
+test('Cloudflare build command gates preview deploys on fast tests', async () => {
+  const root = resolve(import.meta.dirname, '..')
+  const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'))
+
+  assert.match(packageJson.scripts.build, /npm test/)
+  assert.match(packageJson.scripts.build, /build:static/)
+  assert.equal(packageJson.scripts['build:static'], 'node scripts/build.mjs')
+  assert.match(packageJson.scripts.check, /npm test/)
+  assert.match(packageJson.scripts.check, /test:e2e/)
+})
