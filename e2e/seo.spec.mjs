@@ -9,10 +9,10 @@ test.describe('technical SEO and release metadata', () => {
   test('homepage exposes canonical, social and ProofStamp entity metadata', async ({ page }) => {
     await page.goto('/')
 
-    await expect(page).toHaveTitle('ProofStamp via Email | Timestamp Photos & Documents Privately')
+    await expect(page).toHaveTitle('ProofStamp via Email | Proof Photos & Files Privately')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', CANONICAL)
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /SHA-256 fingerprints for photos and documents/)
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /SHA-256 fingerprints for photos and files on your device/)
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', CANONICAL)
     await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'ProofStamp')
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary')
@@ -36,6 +36,7 @@ test.describe('technical SEO and release metadata', () => {
     await expect(page.locator('.site-footer > span')).toHaveText(`ProofStamp · v${APP_VERSION}`)
     await expect(page.locator('script[src^="/app.js"]')).toHaveAttribute('src', `/app.js?v=${APP_VERSION}`)
     await expect(page.locator('link[href^="/styles.css"]')).toHaveAttribute('href', `/styles.css?v=${APP_VERSION}`)
+    await expect(page.locator('link[href^="/concept-a.css"]')).toHaveAttribute('href', `/concept-a.css?v=${APP_VERSION}`)
 
     await page.goto('/stats')
     await expect(page.locator('.site-footer > span')).toHaveText(`ProofStamp · v${APP_VERSION}`)
