@@ -103,11 +103,9 @@ const homePath = resolve(destination, 'index.html')
 const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
 await writeFile(homePath, homeHtml)
 
-// Give /verify its own static entry point instead of depending on a rewrite to
-// the site root. This keeps direct links and typed URLs on the verifier route.
-const verifyDirectory = resolve(destination, 'verify')
-await mkdir(verifyDirectory, { recursive: true })
-await writeFile(resolve(verifyDirectory, 'index.html'), homeHtml)
+// Cloudflare Pages serves /verify from verify.html without changing the URL.
+// This avoids the old SPA/root rewrite and gives the verifier a real route.
+await writeFile(resolve(destination, 'verify.html'), homeHtml)
 
 const headersPath = resolve(destination, '_headers')
 const headers = await readFile(headersPath, 'utf8')
