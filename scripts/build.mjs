@@ -85,14 +85,6 @@ function addHomeSeo(html) {
     )
 }
 
-function addStatsRobotsMeta(html) {
-  if (html.includes('name="robots"')) return html
-  return html.replace(
-    '    <meta name="theme-color" content="#071b2c" />',
-    '    <meta name="theme-color" content="#071b2c" />\n    <meta name="robots" content="noindex, follow" />'
-  )
-}
-
 function addReleaseVersion(html) {
   return html
     .replace(/<span>ProofStamp(?: · v[0-9.]+)?<\/span>/, `<span>ProofStamp · v${appVersion}</span>`)
@@ -104,12 +96,7 @@ await mkdir(destination, { recursive: true })
 await cp(source, destination, { recursive: true })
 
 const homePath = resolve(destination, 'index.html')
-const statsPath = resolve(destination, 'stats/index.html')
-
 const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
-const statsHtml = addReleaseVersion(addStatsRobotsMeta(await readFile(statsPath, 'utf8')))
-
 await writeFile(homePath, homeHtml)
-await writeFile(statsPath, statsHtml)
 
 console.log(`Built static site in dist/ (v${appVersion})`)
