@@ -245,6 +245,13 @@
   min-height: 50px;
 }
 
+.email-cta-note {
+  margin: .45rem 0 0;
+  color: var(--muted, #5f6b73);
+  font-size: .82rem;
+  text-align: center;
+}
+
 .attach-note {
   display: block;
   margin-top: .85rem;
