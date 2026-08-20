@@ -126,7 +126,7 @@ test('builds a standards-friendly mailto URL with a concise single-file ProofSta
   assert.match(body, new RegExp(receiptHash))
   assert.match(body, /ProofStamp for: Apartment condition before moving in/)
   assert.match(body, /VERIFY THE FILE/)
-  assert.match(body, /\nFILE\nbedroom\.jpg · 2\.0 KB/)
+  assert.match(body, /\r?\nFILE\r?\nbedroom\.jpg · 2\.0 KB/)
   assert.match(body, /SHA-256 hash \/ file fingerprint:/)
   assert.match(body, /Keep the exact original file\./)
   assert.match(body, /The email received time shows when this ProofStamp reached the inbox\./)
