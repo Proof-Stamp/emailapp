@@ -12,3 +12,10 @@ test('CSP disables runtime network connections for the local-only utility', asyn
   assert.match(headers, /default-src 'self'/)
   assert.match(headers, /object-src 'none'/)
 })
+
+test('CSP allows local blob image previews without enabling network image sources', async () => {
+  const headers = await readFile(headersPath, 'utf8')
+
+  assert.match(headers, /img-src 'self' data: blob:/)
+  assert.doesNotMatch(headers, /img-src[^;]*https:/)
+})
