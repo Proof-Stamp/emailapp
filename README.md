@@ -95,6 +95,8 @@ See [docs/architecture.md](docs/architecture.md) for the format and verification
 
 ## Automated checks
 
-`npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview.
+`npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview or production build.
 
-`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, picker guidance, fresh-capture preservation, focus handling, downloads, validation, visible SHA-256 fingerprint output, and large touch targets. GitHub Actions runs this full check on pushes to `main` and can also be started manually while the GitHub-hosted PR runner issue is unresolved.
+`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, picker guidance, fresh-capture preservation, focus handling, downloads, validation, visible SHA-256 fingerprint output, and large touch targets.
+
+GitHub Actions is intentionally not used for this repository. Before merging meaningful browser or mobile UX changes, run `npm run check` locally. For copy-only or documentation changes, the automatic Cloudflare `npm test` gate is normally sufficient.
