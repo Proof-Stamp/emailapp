@@ -9,7 +9,7 @@
       content="Create a private ProofStamp for photos and files on your device, then email, copy, or save it. No upload. No account."
     />
     <title>ProofStamp for Photos and Files</title>
-    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.5" type="image/svg+xml" />
+    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.6" type="image/svg+xml" />
     <link
       rel="preload"
       href="/fonts/source-serif-4-latin-variable.woff2"
@@ -17,16 +17,17 @@
       type="font/woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/styles.css?v=0.4.5" />
-    <link rel="stylesheet" href="/ux.css?v=0.4.5" />
-    <link rel="stylesheet" href="/concept-a.css?v=0.4.5" />
+    <link rel="stylesheet" href="/styles.css?v=0.4.6" />
+    <link rel="stylesheet" href="/ux.css?v=0.4.6" />
+    <link rel="stylesheet" href="/concept-a.css?v=0.4.6" />
+    <link rel="stylesheet" href="/mobile-picker-safety.css?v=0.4.6" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
 
     <header class="site-header compact-header">
       <a class="brand" href="/" aria-label="ProofStamp home">
-        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.5" width="41" height="41" alt="" />
+        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.6" width="41" height="41" alt="" />
         <span class="brand-copy">
           <strong>ProofStamp</strong>
           <small>via email</small>
@@ -62,10 +63,18 @@
               <span class="action-icon" aria-hidden="true">＋</span>
               <span>Choose photos or files</span>
             </label>
+            <p class="picker-help"><strong>On phone:</strong> use Photos &amp; videos for your gallery. For PDFs or documents, look for Files, My Files, Documents, or Browse. You may need to swipe the picker choices.</p>
 
             <div id="selected-files" class="selected-preview-grid" hidden></div>
             <label id="add-more-files" class="add-another-button" for="file-input" hidden>+ Add more</label>
             <div id="hash-status" class="hash-status" role="status" aria-live="polite" hidden></div>
+
+            <section id="captured-media-safety" class="capture-safety" aria-labelledby="capture-safety-title" hidden>
+              <strong id="capture-safety-title">Just used Camera, Video, or Recorder?</strong>
+              <p>Your phone may give that new file to ProofStamp without saving it to your normal Photos or Files. Save an original copy before leaving.</p>
+              <button id="save-selected-media" class="secondary-button" type="button">Save original copy</button>
+              <small id="save-media-status" class="save-media-status" role="status" aria-live="polite"></small>
+            </section>
           </section>
 
           <section class="stage details-stage" id="details-stage" aria-labelledby="details-stage-title" hidden>
@@ -126,6 +135,7 @@
           <div id="verify-alert" class="alert" role="alert" hidden></div>
           <input id="verify-file" class="file-input-control" type="file" multiple />
           <label class="drop-zone" id="verify-drop-zone" for="verify-file"><span class="upload-icon" aria-hidden="true">↑</span><strong>Choose saved files</strong><span>Up to 5 files, 50 MB each</span></label>
+          <p class="picker-help"><strong>Looking for a document?</strong> Choose Files, My Files, Documents, or Browse in your phone's picker.</p>
           <div id="verify-selected-files" hidden></div>
           <label id="add-more-verify-files" class="add-another-button" for="verify-file" hidden>+ Add files</label>
           <div class="field verify-fingerprint-field"><label for="expected-hash">ProofStamp or fingerprint</label><textarea id="expected-hash" rows="4" placeholder="Paste the ProofStamp email or SHA-256 fingerprint"></textarea></div>
@@ -146,7 +156,7 @@
     </main>
 
     <footer class="site-footer">
-      <span>ProofStamp · v0.4.5</span>
+      <span>ProofStamp · v0.4.6</span>
       <nav aria-label="Footer navigation">
         <a href="mailto:info@proofstamp.org?subject=ProofStamp%20feedback">Feedback</a>
         <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">Learn about SHA-256</a>
@@ -156,7 +166,8 @@
     </footer>
 
     <noscript><div class="noscript-note">ProofStamp needs JavaScript to calculate SHA-256 on your device. Your files are not uploaded.</div></noscript>
-    <script type="module" src="/app.js?v=0.4.5"></script>
-    <script type="module" src="/return-flow.js?v=0.4.5"></script>
+    <script type="module" src="/media-preservation.js?v=0.4.6"></script>
+    <script type="module" src="/app.js?v=0.4.6"></script>
+    <script type="module" src="/return-flow.js?v=0.4.6"></script>
   </body>
 </html>
