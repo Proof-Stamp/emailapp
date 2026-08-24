@@ -13,6 +13,15 @@ test('CSP disables runtime network connections for the local-only utility', asyn
   assert.match(headers, /object-src 'none'/)
 })
 
+test('CSP allows only same-origin workers and WebAssembly execution', async () => {
+  const headers = await readFile(headersPath, 'utf8')
+
+  assert.match(headers, /worker-src 'self'/)
+  assert.match(headers, /script-src 'self' 'wasm-unsafe-eval'/)
+  assert.doesNotMatch(headers, /(?:^|\s)'unsafe-eval'(?:\s|;|$)/)
+  assert.doesNotMatch(headers, /worker-src[^;]*(?:blob:|data:|https:)/)
+})
+
 test('CSP allows local blob image previews without enabling network image sources', async () => {
   const headers = await readFile(headersPath, 'utf8')
 
