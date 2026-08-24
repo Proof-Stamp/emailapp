@@ -44,7 +44,6 @@ function moveTo(element, { focus = false, block = 'center' } = {}) {
       if (!naturallyFocusable) element.setAttribute('tabindex', '-1')
       element.focus({ preventScroll: true })
     }
-    // Focus changes should land predictably in the viewport. Decorative moves may animate.
     element.scrollIntoView({ behavior: focus || prefersReducedMotion() ? 'auto' : 'smooth', block })
   })
 }
@@ -402,7 +401,7 @@ function createReceipt() {
   els.fileStage.hidden = true
   els.detailsStage.hidden = true
   els.receiptStage.hidden = false
-  moveTo($('#receipt-stage-title'), { focus: true, block: 'start' })
+  moveTo($('#receipt-stage-title'), { focus: true, block: 'center' })
 }
 
 function publicReceipt() {
@@ -429,115 +428,74 @@ function renderReceipt() {
     [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
     [hashLabel, hashValue]
   ]
-  els.receiptSummary.replaceChildren(...rows.map(([label, value]) => {
-    const row = document.createElement('div')
-    const strong = document.createElement('strong')
-    strong.textContent = label
-    const span = document.createElement('span')
-    span.textContent = value
-    if (label.startsWith('SHA-256')) {
-      span.className = 'hash-value receipt-hash-value'
-      span.style.whiteSpace = 'pre-wrap'
+  els.receiptSummary.replaceChildren(...rows.flatMap(([key, value]) => {
+    const dt = document.createElement('dt')
+    const dd = document.createElement('dd')
+    dt.textContent = key
+    dd.textContent = value
+    if (key.startsWith('SHA-256')) {
+      dt.classList.add('receipt-hash-label')
+      dd.classList.add('receipt-hash')
     }
-    row.append(strong, span)
-    return row
+    return [dt, dd]
   }))
-  if (els.providerCount) els.providerCount.textContent = primaryEmail && secondEmail ? 'Both inboxes' : 'The inbox'
+  els.providerCount.textContent = secondEmail ? '2 email addresses' : '1 email address'
 }
 
-function restoreReceiptState() {
-  try {
-    const raw = sessionStorage.getItem('proofstamp-email-return')
-    if (!raw) return false
-    const saved = JSON.parse(raw)
-    if (!saved?.receipt || !saved?.delivery?.primaryEmail) return false
-    currentReceipt = { ...saved.receipt, _delivery: saved.delivery }
-    renderReceipt()
-    els.fileStage.hidden = true
-    els.detailsStage.hidden = true
-    els.receiptStage.hidden = false
-    moveTo($('#receipt-stage-title'), { focus: true, block: 'start' })
-    return true
-  } catch {
-    return false
-  }
-}
-
-function saveReceiptState() {
-  if (!currentReceipt) return
-  try {
-    sessionStorage.setItem('proofstamp-email-return', JSON.stringify({
-      receipt: publicReceipt(),
-      delivery: currentReceipt._delivery
-    }))
-  } catch {
-    // Continue without return-state convenience.
-  }
-}
-
-function openEmail(event) {
-  event.preventDefault()
-  if (!currentReceipt) return
+function openEmail() {
   const { primaryEmail, secondEmail } = currentReceipt._delivery
-  const href = createMailtoUrl({
-    primaryEmail,
-    secondEmail,
-    receipt: publicReceipt()
-  })
-  saveReceiptState()
-  const mobile = window.matchMedia('(max-width: 700px)').matches
-  if (mobile) {
-    location.href = href
-    return
-  }
-  const popup = window.open(href, '_blank', 'noopener,noreferrer')
-  if (!popup) location.href = href
+  window.location.href = createMailtoUrl({ receipt: publicReceipt(), primaryEmail, secondEmail })
 }
 
-async function copyText(value, button, successLabel) {
-  const original = button.textContent
+async function copyText(text, button, label) {
   try {
-    await navigator.clipboard.writeText(value)
-    button.textContent = successLabel
-    setTimeout(() => { button.textContent = original }, 1200)
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+    await navigator.clipboard.writeText(text)
+    const previous = button.textContent
+    button.textContent = label
+    setTimeout(() => { button.textContent = previous }, 1500)
   } catch {
-    showToast('Couldn’t copy here. Use Save ProofStamp instead.')
+    showToast('Copying was blocked. Use Save ProofStamp instead.')
   }
 }
 
-function downloadReceipt() {
-  if (!currentReceipt) return
-  const blob = new Blob([receiptToText(publicReceipt())], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
+function triggerDownload(blob, filename) {
   const link = document.createElement('a')
-  link.href = url
-  link.download = 'proofstamp.txt'
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
   document.body.append(link)
   link.click()
   link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 0)
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+}
+
+function downloadReceipt() {
+  const receipt = publicReceipt()
+  const keyHash = receipt.files[0].hash
+  triggerDownload(new Blob([receiptToText(receipt)], { type: 'text/plain;charset=utf-8' }), `proofstamp-${keyHash.slice(0, 12)}.txt`)
 }
 
 function renderVerifyFiles() {
   els.verifySelectedFiles.replaceChildren(...selectedVerifyFiles.map((file, index) => makeFileRow(file, index, removeVerifyFile)))
   const hasFiles = selectedVerifyFiles.length > 0
-  const canAdd = selectedVerifyFiles.length < MAX_FILES_PER_PROOFSTAMP
   els.verifySelectedFiles.hidden = !hasFiles
   els.verifyDropZone.hidden = hasFiles
-  els.addMoreVerifyFiles.hidden = !hasFiles || !canAdd
+  els.addMoreVerifyFiles.hidden = !hasFiles || selectedVerifyFiles.length >= MAX_FILES_PER_PROOFSTAMP
 }
 
 function acceptVerifyFiles(fileList) {
   showAlert(els.verifyAlert, '')
+  els.verifyResult.hidden = true
   const result = mergeFileSelection(selectedVerifyFiles, fileList)
   els.verifyFile.value = ''
+
   if (result.error) {
     showAlert(els.verifyAlert, `${result.error}${previousSelectionCopy(selectedVerifyFiles)}`, { move: true })
     return
   }
+
   if (result.added) selectedVerifyFiles = result.files
   renderVerifyFiles()
-  els.verifyResult.hidden = true
   if (result.duplicates) showAlert(els.verifyAlert, duplicateSelectionCopy(result.duplicates))
 }
 
@@ -653,4 +611,3 @@ els.verifyButton.addEventListener('click', verify)
 window.addEventListener('pagehide', revokeAllPreviews)
 
 if (location.pathname.startsWith('/verify') || location.hash === '#verify') switchTab('verify', { move: true })
-else if (!restoreReceiptState()) switchTab('create', { move: false })
