@@ -2,18 +2,50 @@
 set -euo pipefail
 
 RUST_VERSION="1.98.0"
+RUSTUP_VERSION="1.29.0"
 MANIFEST="rust/sha256-wasm/Cargo.toml"
 WASM="rust/sha256-wasm/target/wasm32-unknown-unknown/release/proofstamp_sha256_wasm.wasm"
 GENERATED="public/rust-sha256-wasm.js"
 
-if ! command -v rustup >/dev/null 2>&1; then
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh
-  sh /tmp/rustup-init.sh -y --profile minimal --default-toolchain "$RUST_VERSION" --target wasm32-unknown-unknown
-  # shellcheck disable=SC1090
-  source "$HOME/.cargo/env"
-fi
+case "$(uname -m)" in
+  x86_64)
+    RUSTUP_HOST="x86_64-unknown-linux-gnu"
+    RUSTUP_SHA256="4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10"
+    ;;
+  aarch64|arm64)
+    RUSTUP_HOST="aarch64-unknown-linux-gnu"
+    RUSTUP_SHA256="9732d6c5e2a098d3521fca8145d826ae0aaa067ef2385ead08e6feac88fa5792"
+    ;;
+  *)
+    echo "Unsupported build architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+esac
 
-rustup toolchain install "$RUST_VERSION" --profile minimal --target wasm32-unknown-unknown
+RUSTUP_INIT="${TMPDIR:-/tmp}/proofstamp-rustup-init"
+RUSTUP_HOME="${TMPDIR:-/tmp}/proofstamp-rustup-home"
+CARGO_HOME="${TMPDIR:-/tmp}/proofstamp-cargo-home"
+export RUSTUP_HOME CARGO_HOME
+export PATH="$CARGO_HOME/bin:$PATH"
+
+rm -rf "$RUSTUP_HOME" "$CARGO_HOME"
+curl --fail --location --proto '=https' --tlsv1.2 \
+  "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUSTUP_HOST}/rustup-init" \
+  --output "$RUSTUP_INIT"
+printf '%s  %s\n' "$RUSTUP_SHA256" "$RUSTUP_INIT" | sha256sum --check
+chmod +x "$RUSTUP_INIT"
+
+"$RUSTUP_INIT" \
+  -y \
+  --no-modify-path \
+  --profile minimal \
+  --default-toolchain "$RUST_VERSION" \
+  --default-host "$RUSTUP_HOST"
+
+rustup target add wasm32-unknown-unknown --toolchain "$RUST_VERSION"
+rustup --version
+rustc +"$RUST_VERSION" --version
+cargo +"$RUST_VERSION" --version
 
 cargo +"$RUST_VERSION" build \
   --manifest-path "$MANIFEST" \
