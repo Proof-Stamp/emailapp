@@ -23,14 +23,17 @@ case "$(uname -m)" in
 esac
 
 # Keep executable toolchain files under HOME. Some hosted builders mount /tmp
-# with noexec, which would make a verified rustup binary impossible to run.
-RUSTUP_INIT="$HOME/.proofstamp-rustup-init"
+# with noexec. Keep the installer basename exactly "rustup-init" because rustup
+# dispatches behavior from argv[0].
+RUSTUP_STAGE="$HOME/.proofstamp-rustup-stage"
+RUSTUP_INIT="$RUSTUP_STAGE/rustup-init"
 RUSTUP_HOME="$HOME/.proofstamp-rustup"
 CARGO_HOME="$HOME/.proofstamp-cargo"
 export RUSTUP_HOME CARGO_HOME
 export PATH="$CARGO_HOME/bin:$PATH"
 
-rm -rf "$RUSTUP_HOME" "$CARGO_HOME" "$RUSTUP_INIT"
+rm -rf "$RUSTUP_STAGE" "$RUSTUP_HOME" "$CARGO_HOME"
+mkdir -p "$RUSTUP_STAGE"
 curl --fail --location --proto '=https' --tlsv1.2 \
   "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUSTUP_HOST}/rustup-init" \
   --output "$RUSTUP_INIT"
@@ -59,4 +62,4 @@ node scripts/check-rust-wasm.mjs "$WASM"
 node scripts/embed-rust-wasm.mjs "$WASM" "$GENERATED"
 node scripts/check-dual-hash.mjs
 
-rm -f "$RUSTUP_INIT"
+rm -rf "$RUSTUP_STAGE"
