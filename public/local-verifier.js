@@ -6,12 +6,17 @@ export class LocalVerificationError extends Error {
   }
 }
 
+const VERIFICATION_TIMEOUT_MS = 120_000
+const SHA256_HEX = /^[a-f0-9]{64}$/
 let worker = null
 let requestId = 0
 const pending = new Map()
 
 function rejectPending(code) {
-  pending.forEach(({ reject }) => reject(new LocalVerificationError(code)))
+  pending.forEach(({ reject, timeout }) => {
+    clearTimeout(timeout)
+    reject(new LocalVerificationError(code))
+  })
   pending.clear()
 }
 
@@ -31,8 +36,14 @@ function getWorker() {
     const request = pending.get(id)
     if (!request) return
     pending.delete(id)
-    if (ok) request.resolve(hash)
-    else request.reject(new LocalVerificationError(code || 'engine-failure'))
+    clearTimeout(request.timeout)
+
+    if (ok && typeof hash === 'string' && SHA256_HEX.test(hash)) {
+      request.resolve(hash)
+      return
+    }
+
+    request.reject(new LocalVerificationError(code || 'engine-failure'))
   })
   worker.addEventListener('error', () => resetWorker('engine-failure'))
   worker.addEventListener('messageerror', () => resetWorker('engine-failure'))
@@ -50,11 +61,19 @@ export async function verifyFileLocally(file) {
   const verifier = getWorker()
   const id = ++requestId
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject })
+    const timeout = setTimeout(() => {
+      if (!pending.has(id)) return
+      pending.delete(id)
+      resetWorker('timeout')
+      reject(new LocalVerificationError('timeout'))
+    }, VERIFICATION_TIMEOUT_MS)
+
+    pending.set(id, { resolve, reject, timeout })
     try {
       verifier.postMessage({ id, buffer }, [buffer])
     } catch {
       pending.delete(id)
+      clearTimeout(timeout)
       reject(new LocalVerificationError('engine-failure'))
     }
   })
