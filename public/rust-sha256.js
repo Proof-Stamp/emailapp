@@ -33,13 +33,16 @@ export async function rustSha256Bytes(bytes) {
   const input = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
   const wasm = await loadWasmExports()
   const chunkCapacity = Math.min(Math.max(input.byteLength, 1), CHUNK_SIZE_BYTES)
-  const chunkPointer = wasm.alloc(chunkCapacity)
-  const outputPointer = wasm.alloc(DIGEST_SIZE_BYTES)
-  let handle = wasm.sha256_new()
-
-  if (!chunkPointer || !outputPointer || !handle) throw new Error('Local verifier allocation failed')
+  let chunkPointer = 0
+  let outputPointer = 0
+  let handle = 0
 
   try {
+    chunkPointer = wasm.alloc(chunkCapacity)
+    outputPointer = wasm.alloc(DIGEST_SIZE_BYTES)
+    handle = wasm.sha256_new()
+    if (!chunkPointer || !outputPointer || !handle) throw new Error('Local verifier allocation failed')
+
     for (let offset = 0; offset < input.byteLength; offset += chunkCapacity) {
       const length = Math.min(chunkCapacity, input.byteLength - offset)
       new Uint8Array(wasm.memory.buffer, chunkPointer, length).set(input.subarray(offset, offset + length))
