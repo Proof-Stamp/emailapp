@@ -14,8 +14,8 @@ test('matching file is verified locally by both local checks', async ({ page }) 
   await page.locator('#verify-button').click()
 
   await expect(page.locator('#verify-result-title')).toHaveText('Verified locally')
-  await expect(page.locator('#verify-result-copy')).toContainText('Two local checks agree')
-  await expect(page.locator('#verify-result-copy')).toContainText('not uploaded')
+  await expect(page.locator('#verify-result-copy')).toContainText('Two different local methods produced the same fingerprint')
+  await expect(page.locator('#verify-result-copy')).toContainText('Nothing was uploaded')
   await expect(page.locator('#actual-hash')).toContainText(abcHash)
 })
 
