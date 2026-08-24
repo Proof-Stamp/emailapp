@@ -55,7 +55,7 @@ test('verification info explains the two local methods and closes accessibly', a
   await expect(info).toContainText('browser’s built-in cryptography')
   await expect(info).toContainText('Rust-based implementation')
   await expect(info).toContainText('If they disagree, verification stops')
-  await expect(info).toContainText('same ProofStamp web app')
+  await expect(info).toContainText('this ProofStamp web app')
 
   await page.keyboard.press('Escape')
   await expect(info).toBeHidden()
