@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-sha2 = "=0.11.0"
+sha2 = { version = "=0.11.0", default-features = false }
 
 [profile.release]
 opt-level = "z"
