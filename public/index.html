@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="/ux.css?v=0.4.12" />
     <link rel="stylesheet" href="/concept-a.css?v=0.4.12" />
     <link rel="stylesheet" href="/mobile-picker-safety.css?v=0.4.12" />
+    <link rel="stylesheet" href="/verify-info.css?v=0.4.12" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
@@ -140,7 +141,19 @@
           <label id="add-more-verify-files" class="add-another-button" for="verify-file" hidden>+ Add files</label>
           <div class="field verify-fingerprint-field"><label for="expected-hash">ProofStamp or fingerprint</label><textarea id="expected-hash" rows="4" placeholder="Paste the ProofStamp email or SHA-256 fingerprint"></textarea></div>
           <button id="verify-button" class="primary-button full-button" type="button">Check files</button>
-          <div id="verify-result" class="verify-result" aria-live="polite" hidden><div id="verify-result-icon" class="verify-result-icon" aria-hidden="true"></div><div><h3 id="verify-result-title"></h3><p id="verify-result-copy"></p><code id="actual-hash"></code></div></div>
+          <div id="verify-result" class="verify-result" aria-live="polite" hidden>
+            <div id="verify-result-icon" class="verify-result-icon" aria-hidden="true"></div>
+            <div class="verify-result-body">
+              <h3 id="verify-result-title"></h3>
+              <p id="verify-result-copy"></p>
+              <code id="actual-hash"></code>
+            </div>
+            <button id="verify-method-info-button" class="verify-method-info-button" type="button" aria-label="How local verification works" aria-expanded="false" aria-controls="verify-method-info"><span aria-hidden="true">i</span></button>
+            <div id="verify-method-info" class="verify-method-info" role="note" aria-labelledby="verify-method-info-title" hidden>
+              <strong id="verify-method-info-title">How local verification works</strong>
+              <p>ProofStamp calculates SHA-256 twice: once with your browser’s built-in cryptography and once with a separate Rust-based implementation. Both hash the same file bytes. If they disagree, verification stops. This helps catch calculation or runtime errors. Both checks still run inside this ProofStamp web app.</p>
+            </div>
+          </div>
         </section>
       </section>
 
@@ -168,6 +181,7 @@
     <noscript><div class="noscript-note">ProofStamp needs JavaScript to calculate SHA-256 on your device. Your files are not uploaded.</div></noscript>
     <script type="module" src="/media-preservation.js?v=0.4.12"></script>
     <script type="module" src="/app.js?v=0.4.12"></script>
+    <script type="module" src="/verify-info.js?v=0.4.12"></script>
     <script type="module" src="/return-flow.js?v=0.4.12"></script>
   </body>
 </html>
