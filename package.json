@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm test && bash scripts/build-preview.sh && npm run build:static",
+    "build": "npm test && bash scripts/build-preview.sh && npm run build:static && npx playwright install chromium webkit && npm run test:e2e",
     "build:static": "node scripts/build.mjs",
     "test": "node --test",
     "test:e2e": "playwright test",
