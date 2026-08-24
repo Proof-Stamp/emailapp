@@ -60,7 +60,7 @@ Playwright is used for development and browser tests.
 
 ```bash
 npm install
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run check
 npx serve public
 ```
@@ -75,7 +75,7 @@ For Cloudflare Pages:
 - Output directory: `dist`
 - Node version: `22`
 
-`npm run build` runs the Node unit/security/version tests before generating `dist`. That means a Cloudflare preview deployment fails if those tests fail. The project remains a static client. The only Cloudflare Pages Function currently retained is preview robots middleware so non-production preview deployments can be marked `noindex`.
+`npm run build` runs the Node unit/security/version tests and builds the locked Rust verifier before generating `dist`. That means a Cloudflare preview or production deployment fails if those build checks fail. The project remains a static client. The only Cloudflare Pages Function currently retained is preview robots middleware so non-production preview deployments can be marked `noindex`.
 
 ## Verification model
 
@@ -97,8 +97,8 @@ The source code is licensed under the [MIT License](LICENSE). The ProofStamp nam
 
 ## Automated checks
 
-`npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview or production build.
+`npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite and the locked Rust verifier build automatically as part of every `npm run build` before it deploys a preview or production build.
 
-`npm run check` runs the fast suite, builds the production site, and then runs Playwright browser tests. The mobile suite covers the 390×844 field-oriented flow, automatic hashing, local thumbnail previews, picker guidance, fresh-capture preservation, focus handling, downloads, validation, visible SHA-256 fingerprint output, and large touch targets.
+`npm run check` runs the fast suite, builds the Rust verifier and production site, then runs Playwright browser tests. The existing mobile suite runs in Chromium at 390×844. Dual local verification is additionally exercised in WebKit so the worker, Web Crypto, and locally embedded verifier path are covered outside Chromium.
 
-GitHub Actions is intentionally not used for this repository. Before merging meaningful browser or mobile UX changes, run `npm run check` locally. For copy-only or documentation changes, the automatic Cloudflare `npm test` gate is normally sufficient.
+GitHub Actions runs `npm run check` for pull requests and on `main`. Meaningful browser or mobile changes should not merge while the `tests` workflow is failing.
