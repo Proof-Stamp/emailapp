@@ -5,6 +5,7 @@ import {
   sha256File
 } from './hash.js'
 import { createMailtoUrl, createReceipt as buildReceipt, formatBytes, isValidEmail, receiptToText } from './receipt.js'
+import { verifyFileLocally } from './local-verifier.js'
 
 const $ = (selector) => document.querySelector(selector)
 const els = {
@@ -525,7 +526,7 @@ async function verify() {
     for (let index = 0; index < selectedVerifyFiles.length; index += 1) {
       const file = selectedVerifyFiles[index]
       els.verifyButton.textContent = selectedVerifyFiles.length === 1 ? 'Checking…' : `Checking… ${index + 1}/${selectedVerifyFiles.length}`
-      actual.push({ file, hash: await sha256File(file) })
+      actual.push({ file, hash: await verifyFileLocally(file) })
     }
 
     const remaining = new Map()
@@ -546,14 +547,14 @@ async function verify() {
     els.verifyResultIcon.textContent = success ? '✓' : '×'
 
     if (success && checkingCompleteSet && actual.length > 1) {
-      els.verifyResultTitle.textContent = `All ${actual.length} files match`
-      els.verifyResultCopy.textContent = 'The selected files match all fingerprints in this ProofStamp.'
+      els.verifyResultTitle.textContent = 'Verified locally'
+      els.verifyResultCopy.textContent = 'Two local checks agree for every file. The selected files match all fingerprints in this ProofStamp. Nothing was uploaded.'
     } else if (success && actual.length === 1) {
-      els.verifyResultTitle.textContent = 'This file matches'
-      els.verifyResultCopy.textContent = 'It has exactly the same contents as a file in this ProofStamp.'
+      els.verifyResultTitle.textContent = 'Verified locally'
+      els.verifyResultCopy.textContent = 'Two local checks agree. This file matches the ProofStamp. Your file was not uploaded.'
     } else if (success) {
-      els.verifyResultTitle.textContent = `All ${actual.length} selected files match`
-      els.verifyResultCopy.textContent = 'Every selected file matches a fingerprint in this ProofStamp.'
+      els.verifyResultTitle.textContent = 'Verified locally'
+      els.verifyResultCopy.textContent = 'Two local checks agree for every selected file. Each selected file matches a fingerprint in this ProofStamp. Nothing was uploaded.'
     } else {
       els.verifyResultTitle.textContent = `${matchedCount} of ${actual.length} files match`
       els.verifyResultCopy.textContent = 'A non-matching file is different, changed, or was not part of this ProofStamp.'
@@ -562,7 +563,7 @@ async function verify() {
     els.actualHash.textContent = results.map(({ file, hash, match }) => `${match ? '✓' : '×'} ${file.name}\n${hash}`).join('\n\n')
     moveTo(els.verifyResultTitle, { focus: true, block: 'center' })
   } catch {
-    showAlert(els.verifyAlert, 'This browser could not read one of those files. Try again.', { move: true })
+    showAlert(els.verifyAlert, 'Local verification could not be completed safely. Try again or use another browser.', { move: true })
   } finally {
     els.verifyButton.disabled = false
     els.verifyButton.textContent = 'Check files'
