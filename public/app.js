@@ -548,13 +548,13 @@ async function verify() {
 
     if (success && checkingCompleteSet && actual.length > 1) {
       els.verifyResultTitle.textContent = 'Verified locally'
-      els.verifyResultCopy.textContent = 'Two local checks agree for every file. The selected files match all fingerprints in this ProofStamp. Nothing was uploaded.'
+      els.verifyResultCopy.textContent = 'Two different local methods produced the same fingerprint for every file. The selected files match all fingerprints in this ProofStamp. Nothing was uploaded.'
     } else if (success && actual.length === 1) {
       els.verifyResultTitle.textContent = 'Verified locally'
-      els.verifyResultCopy.textContent = 'Two local checks agree. This file matches the ProofStamp. Your file was not uploaded.'
+      els.verifyResultCopy.textContent = 'Two different local methods produced the same fingerprint. This file matches the ProofStamp. Nothing was uploaded.'
     } else if (success) {
       els.verifyResultTitle.textContent = 'Verified locally'
-      els.verifyResultCopy.textContent = 'Two local checks agree for every selected file. Each selected file matches a fingerprint in this ProofStamp. Nothing was uploaded.'
+      els.verifyResultCopy.textContent = 'Two different local methods produced the same fingerprint for every selected file. Each selected file matches a fingerprint in this ProofStamp. Nothing was uploaded.'
     } else {
       els.verifyResultTitle.textContent = `${matchedCount} of ${actual.length} files match`
       els.verifyResultCopy.textContent = 'A non-matching file is different, changed, or was not part of this ProofStamp.'
