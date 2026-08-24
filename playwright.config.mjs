@@ -18,7 +18,8 @@ export default defineConfig({
       }
     },
     {
-      name: 'webkit-iphone',
+      name: 'webkit-verify',
+      testMatch: '**/dual-verification.spec.mjs',
       use: {
         ...devices['iPhone 13'],
         browserName: 'webkit'
