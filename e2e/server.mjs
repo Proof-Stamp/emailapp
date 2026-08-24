@@ -4,6 +4,10 @@ import { extname, resolve, sep } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../dist')
 const port = 4173
+const headersConfig = await readFile(resolve(root, '_headers'), 'utf8')
+const cspMatch = headersConfig.match(/^\s*Content-Security-Policy:\s*(.+)$/m)
+if (!cspMatch) throw new Error('Built _headers is missing Content-Security-Policy')
+const productionCsp = cspMatch[1].trim()
 
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -45,7 +49,10 @@ createServer(async (request, response) => {
     const body = await readFile(target)
     response.writeHead(200, {
       'content-type': contentTypes[extname(target)] || 'application/octet-stream',
-      'cache-control': 'no-store'
+      'cache-control': 'no-store',
+      'content-security-policy': productionCsp,
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer'
     })
     response.end(request.method === 'HEAD' ? undefined : body)
   } catch (error) {

@@ -6,10 +6,17 @@ export function sha256CspSource(text) {
 }
 
 export function addScriptHashToCsp(headers, scriptHash) {
-  const needle = "script-src 'self';"
-  if (!headers.includes(needle)) {
-    throw new Error('Expected a strict self-only script-src directive before adding the JSON-LD hash.')
+  const match = headers.match(/script-src\s+([^;]+);/)
+  if (!match) throw new Error('Expected a script-src directive before adding the JSON-LD hash.')
+
+  const sources = match[1].trim().split(/\s+/)
+  const allowed = new Set(["'self'", "'wasm-unsafe-eval'"])
+  const safe = sources.includes("'self'") && sources.every((source) => allowed.has(source))
+  if (!safe) {
+    throw new Error('Expected a strict local script-src directive before adding the JSON-LD hash.')
   }
 
-  return headers.replace(needle, `script-src 'self' ${scriptHash};`)
+  const original = match[0]
+  const hardened = `script-src ${sources.join(' ')} ${scriptHash};`
+  return headers.replace(original, hardened)
 }

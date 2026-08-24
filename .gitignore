@@ -2,6 +2,8 @@ dist/
 node_modules/
 playwright-report/
 test-results/
+public/rust-sha256-wasm.js
+rust/sha256-wasm/target/
 .DS_Store
 
 # Local secrets and deployment state

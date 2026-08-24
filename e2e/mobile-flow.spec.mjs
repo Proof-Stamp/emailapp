@@ -44,7 +44,7 @@ test.describe('Concept A mobile flow', () => {
     await page.goto('/')
     await expect(page.locator('#hero-title')).toHaveText('Proof a photo or file by email.')
     await expect(page.locator('#camera-input')).toHaveCount(0)
-    await expect(page.locator('label[for="file-input"]')).toContainText('Choose photos or files')
+    await expect(page.locator('#drop-zone')).toContainText('Choose photos or files')
     await expect(page.locator('#file-stage')).toContainText('Preview your selection')
     await expect(page.locator('#file-stage')).toContainText('Files stay on this device')
   })
@@ -228,7 +228,7 @@ test.describe('Concept A mobile flow', () => {
 
     const result = page.locator('#verify-result')
     await expect(result).toHaveClass(/match/)
-    await expect(page.locator('#verify-result-title')).toHaveText('This file matches')
+    await expect(page.locator('#verify-result-title')).toHaveText('Verified locally')
     await expectInViewport(result)
   })
 
@@ -252,7 +252,7 @@ test.describe('Concept A mobile flow', () => {
 
   test('primary mobile controls are at least 44 CSS pixels tall', async ({ page }) => {
     await page.goto('/')
-    const picker = page.locator('label[for="file-input"]')
+    const picker = page.locator('#drop-zone')
     const pickerBox = await picker.boundingBox()
     expect(pickerBox?.height || 0).toBeGreaterThanOrEqual(44)
 

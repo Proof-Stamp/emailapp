@@ -13,13 +13,23 @@ test('JSON-LD gets an exact SHA-256 CSP source without weakening script policy',
 
   assert.match(hardened, new RegExp(`script-src 'self' ${hash.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')};`))
   assert.match(hardened, /connect-src 'none'/)
-  assert.doesNotMatch(hardened, /unsafe-inline|unsafe-eval/)
+  assert.doesNotMatch(hardened, /unsafe-inline/)
+  assert.doesNotMatch(hardened, /(?:^|\s)'unsafe-eval'(?:\s|;|$)/)
   assert.doesNotMatch(hardened, /https:\/\//)
+})
+
+test('JSON-LD hash preserves the narrow WebAssembly execution source', () => {
+  const hash = "'sha256-test'"
+  const headers = "Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'none'"
+  const hardened = addScriptHashToCsp(headers, hash)
+
+  assert.match(hardened, /script-src 'self' 'wasm-unsafe-eval' 'sha256-test';/)
+  assert.doesNotMatch(hardened, /(?:^|\s)'unsafe-eval'(?:\s|;|$)/)
 })
 
 test('CSP helper refuses to modify an unexpected script policy', () => {
   assert.throws(
     () => addScriptHashToCsp("Content-Security-Policy: script-src 'self' https://example.com;", "'sha256-test'"),
-    /strict self-only script-src/
+    /strict local script-src/
   )
 })

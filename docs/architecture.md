@@ -49,6 +49,8 @@ File processing remains local to the browser.
 - No registration, login, cookie-based identity, or proof storage is required.
 - The client makes no ProofStamp API request while creating or verifying a proof.
 - The production Content Security Policy uses `connect-src 'none'` to prevent client-side fetch, XHR, EventSource, and WebSocket connections.
+- Verification workers are restricted to same-origin code with `worker-src 'self'`.
+- WebAssembly execution is allowed narrowly with `wasm-unsafe-eval`; ordinary JavaScript `unsafe-eval` is not enabled.
 
 The return-from-email convenience stores the current ProofStamp and delivery fields in `sessionStorage`. This is local, temporary interface state. It is not a proof store, is not sent to ProofStamp, and is not relied on for verification.
 
@@ -57,6 +59,8 @@ The return-from-email convenience stores the current ProofStamp and delivery fie
 Every selected file gets its own SHA-256 fingerprint. A multi-file ProofStamp is one description plus a list of individual fingerprints.
 
 Hashing begins automatically after selection. The actual **SHA-256 hash / file fingerprint** remains visible in the ready screen and generated ProofStamp because it is the core proof value, not just an implementation detail.
+
+ProofStamp creation continues to use the browser's Web Crypto SHA-256 implementation. Dual calculation is used only when checking an existing ProofStamp.
 
 ## ProofStamp format
 
@@ -113,6 +117,17 @@ The following are useful ways to preserve the attestation but are not treated as
 
 When a user pastes a ProofStamp email, the verifier extracts the individual SHA-256 fingerprints.
 
+For each selected file, verification follows this local sequence:
+
+1. The browser reads the file once with `File.arrayBuffer()`.
+2. Ownership of that exact byte buffer is transferred to a dedicated module worker.
+3. The worker calculates SHA-256 with Web Crypto.
+4. The same byte sequence is calculated by a separate RustCrypto `sha2` implementation compiled to WebAssembly. The Rust side receives bounded chunks copied from the transferred buffer into its own linear memory.
+5. The two locally calculated hashes must be identical. A disagreement or failure stops verification and is not treated as a normal file mismatch.
+6. Only after the two calculations agree is that hash compared with the fingerprint recorded in the ProofStamp.
+
+The Rust verifier source, exact Rust toolchain, exact `sha2` dependency, committed `Cargo.lock`, checksum-pinned rustup installer, and deterministic embed script are part of the repository so the implementation can be audited and rebuilt. Each production or preview build regenerates the verifier from that pinned source. The application does not fetch a WebAssembly binary, cryptographic library, or verification service at runtime.
+
 - One selected file can be checked against any fingerprint in the ProofStamp.
 - Several selected files are checked as a multiset, so duplicate fingerprints cannot be reused more times than they appear in the ProofStamp.
 - If the number of selected files equals the number of fingerprints and they all match, the selected files match the complete recorded collection.
@@ -120,12 +135,18 @@ When a user pastes a ProofStamp email, the verifier extracts the individual SHA-
 
 A SHA-256 match shows that the compared byte sequences are identical with extremely high confidence.
 
-It does not establish the original creation time, source, authorship, location, pre-ProofStamp editing history, or truth of the files' contents. Users should retain the exact original files and, when email timing matters, the full received email including headers.
+The two calculations provide implementation diversity, not two independent trust authorities. Both implementations and the result UI are delivered by the same ProofStamp web application. A fully compromised ProofStamp deployment could therefore subvert both calculations or the displayed result. Dual local verification is intended to detect calculation-path defects or disagreement, not to make the web application itself a separate root of trust.
+
+A match does not establish the original creation time, source, authorship, location, pre-ProofStamp editing history, or truth of the files' contents. Users should retain the exact original files and, when email timing matters, the full received email including headers.
 
 ## Deployment
 
 The repository builds the static client to `dist/` with `npm run build`.
 
-Cloudflare Pages can serve the static application. No API, database binding, or backend proof service is required. The remaining Pages middleware exists only to set `noindex, nofollow` on Cloudflare preview deployments.
+`npm run build` runs the fast Node tests, installs the checksum-verified pinned Rust toolchain in an isolated build location, compiles the locked Rust verifier, checks known SHA-256 vectors and agreement with Web Crypto, embeds the generated verifier bytes into the static client, and then creates `dist/`. A failure in any verifier-build step fails the deployment.
+
+Cloudflare Pages serves the resulting static application. No API, database binding, or backend proof service is required. The remaining Pages middleware exists only to set `noindex, nofollow` on Cloudflare preview deployments.
+
+GitHub Actions runs the fuller `npm run check` gate for pull requests and `main`, including Chromium mobile tests and the dual-verification flow in WebKit.
 
 A future service worker may cache the application shell for offline loading. It should cache application assets only, not user files, hashes, descriptions, recipient addresses, or generated ProofStamps.
