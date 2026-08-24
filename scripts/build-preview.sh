@@ -20,3 +20,5 @@ if [[ ! -f "$GENERATED" ]]; then
   node scripts/check-rust-wasm.mjs "$WASM"
   node scripts/embed-rust-wasm.mjs "$WASM" "$GENERATED"
 fi
+
+node scripts/check-dual-hash.mjs
