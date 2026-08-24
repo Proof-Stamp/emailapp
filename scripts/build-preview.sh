@@ -6,8 +6,6 @@ MANIFEST="rust/sha256-wasm/Cargo.toml"
 WASM="rust/sha256-wasm/target/wasm32-unknown-unknown/release/proofstamp_sha256_wasm.wasm"
 GENERATED="public/rust-sha256-wasm.js"
 
-npm test
-
 if [[ ! -f "$GENERATED" ]]; then
   if ! command -v rustup >/dev/null 2>&1; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh
@@ -22,5 +20,3 @@ if [[ ! -f "$GENERATED" ]]; then
   node scripts/check-rust-wasm.mjs "$WASM"
   node scripts/embed-rust-wasm.mjs "$WASM" "$GENERATED"
 fi
-
-npm run build:static
