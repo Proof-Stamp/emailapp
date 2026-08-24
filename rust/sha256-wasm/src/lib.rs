@@ -1,3 +1,5 @@
+#![deny(unsafe_op_in_unsafe_fn)]
+
 use sha2::{Digest, Sha256};
 use std::{mem, ptr, slice};
 
@@ -19,7 +21,8 @@ pub unsafe extern "C" fn dealloc(pointer: *mut u8, size: usize) {
     }
 
     let capacity = size.max(1);
-    drop(Vec::from_raw_parts(pointer, 0, capacity));
+    // SAFETY: callers may pass only pointers returned by `alloc` with the same requested size.
+    unsafe { drop(Vec::from_raw_parts(pointer, 0, capacity)) };
 }
 
 #[no_mangle]
@@ -40,9 +43,11 @@ pub unsafe extern "C" fn sha256_update(
     let bytes = if length == 0 {
         &[]
     } else {
-        slice::from_raw_parts(pointer, length)
+        // SAFETY: the JS wrapper writes exactly `length` bytes into an allocation from `alloc`.
+        unsafe { slice::from_raw_parts(pointer, length) }
     };
-    (*handle).update(bytes);
+    // SAFETY: `handle` comes from `sha256_new` and remains owned until finalize/free.
+    unsafe { (*handle).update(bytes) };
     1
 }
 
@@ -52,15 +57,18 @@ pub unsafe extern "C" fn sha256_finalize(handle: *mut Sha256, output: *mut u8) -
         return 0;
     }
 
-    let hasher = Box::from_raw(handle);
+    // SAFETY: `handle` comes from `sha256_new` and is consumed exactly once here.
+    let hasher = unsafe { Box::from_raw(handle) };
     let digest = hasher.finalize();
-    ptr::copy_nonoverlapping(digest.as_ptr(), output, SHA256_DIGEST_BYTES);
+    // SAFETY: `output` points to an allocation of at least SHA256_DIGEST_BYTES bytes.
+    unsafe { ptr::copy_nonoverlapping(digest.as_ptr(), output, SHA256_DIGEST_BYTES) };
     1
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn sha256_free(handle: *mut Sha256) {
     if !handle.is_null() {
-        drop(Box::from_raw(handle));
+        // SAFETY: `handle` comes from `sha256_new` and has not been finalized or freed.
+        unsafe { drop(Box::from_raw(handle)) };
     }
 }
