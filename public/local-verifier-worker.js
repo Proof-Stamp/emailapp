@@ -1,4 +1,5 @@
-import { dualSha256Bytes, HashEngineDisagreementError } from './dual-hash.js'
+import { dualSha256Bytes } from './dual-hash.js'
+import { HashEngineDisagreementError } from './hash-agreement.js'
 
 self.addEventListener('message', async (event) => {
   const { id, buffer } = event.data || {}
