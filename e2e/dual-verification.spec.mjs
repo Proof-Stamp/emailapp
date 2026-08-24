@@ -7,16 +7,18 @@ const abcFile = {
   buffer: Buffer.from('abc')
 }
 
-test('matching file is verified locally by both local methods from one file read', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.__proofstampArrayBufferReads = 0
-    const nativeArrayBuffer = Blob.prototype.arrayBuffer
-    File.prototype.arrayBuffer = function arrayBuffer() {
-      window.__proofstampArrayBufferReads += 1
-      return nativeArrayBuffer.call(this)
-    }
-  })
+async function verifyAbc(page) {
+  await page.goto('/verify')
+  await page.locator('#verify-file').setInputFiles(abcFile)
+  await page.locator('#expected-hash').fill(abcHash)
+  await page.locator('#verify-button').click()
+  await expect(page.locator('#verify-result-title')).toHaveText('Verified locally')
+  await expect(page.locator('#verify-result-copy')).toContainText('Two different local methods produced the same fingerprint')
+  await expect(page.locator('#verify-result-copy')).toContainText('Nothing was uploaded')
+  await expect(page.locator('#actual-hash')).toContainText(abcHash)
+}
 
+test('matching file is verified locally by both local methods without upload', async ({ page }) => {
   await page.goto('/verify')
   await page.locator('#verify-file').setInputFiles(abcFile)
   await page.locator('#expected-hash').fill(abcHash)
@@ -30,14 +32,28 @@ test('matching file is verified locally by both local methods from one file read
   await expect(page.locator('#verify-result-copy')).toContainText('Nothing was uploaded')
   await expect(page.locator('#actual-hash')).toContainText(abcHash)
 
-  expect(await page.evaluate(() => window.__proofstampArrayBufferReads)).toBe(1)
-
   const pageOrigin = new URL(page.url()).origin
   for (const request of requestsDuringVerification) {
     expect(request.method()).toBe('GET')
     expect(new URL(request.url()).origin).toBe(pageOrigin)
     expect(request.postData()).toBeNull()
   }
+})
+
+test('browser verification reads the selected file exactly once', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'File prototype instrumentation is Chromium-only; cross-browser verification is covered separately.')
+
+  await page.addInitScript(() => {
+    window.__proofstampArrayBufferReads = 0
+    const nativeArrayBuffer = Blob.prototype.arrayBuffer
+    File.prototype.arrayBuffer = function arrayBuffer() {
+      window.__proofstampArrayBufferReads += 1
+      return nativeArrayBuffer.call(this)
+    }
+  })
+
+  await verifyAbc(page)
+  expect(await page.evaluate(() => window.__proofstampArrayBufferReads)).toBe(1)
 })
 
 test('agreed local hash that differs from the ProofStamp stays a mismatch', async ({ page }) => {
