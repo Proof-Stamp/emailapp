@@ -122,11 +122,11 @@ For each selected file, verification follows this local sequence:
 1. The browser reads the file once with `File.arrayBuffer()`.
 2. Ownership of that exact byte buffer is transferred to a dedicated module worker.
 3. The worker calculates SHA-256 with Web Crypto.
-4. The same byte sequence is independently calculated by a RustCrypto `sha2` implementation compiled to WebAssembly. The Rust side receives bounded chunks copied from the transferred buffer into its own linear memory.
+4. The same byte sequence is calculated by a separate RustCrypto `sha2` implementation compiled to WebAssembly. The Rust side receives bounded chunks copied from the transferred buffer into its own linear memory.
 5. The two locally calculated hashes must be identical. A disagreement or failure stops verification and is not treated as a normal file mismatch.
 6. Only after the two calculations agree is that hash compared with the fingerprint recorded in the ProofStamp.
 
-The Rust verifier source, pinned toolchain, exact `sha2` version, deterministic embed script, and generated artifact are part of the repository so the implementation can be audited and rebuilt. The application does not fetch a WebAssembly binary, cryptographic library, or verification service at runtime.
+The Rust verifier source, exact Rust toolchain, exact `sha2` dependency, committed `Cargo.lock`, checksum-pinned rustup installer, and deterministic embed script are part of the repository so the implementation can be audited and rebuilt. Each production or preview build regenerates the verifier from that pinned source. The application does not fetch a WebAssembly binary, cryptographic library, or verification service at runtime.
 
 - One selected file can be checked against any fingerprint in the ProofStamp.
 - Several selected files are checked as a multiset, so duplicate fingerprints cannot be reused more times than they appear in the ProofStamp.
@@ -143,8 +143,10 @@ A match does not establish the original creation time, source, authorship, locat
 
 The repository builds the static client to `dist/` with `npm run build`.
 
-Cloudflare Pages can serve the static application. No API, database binding, or backend proof service is required. The remaining Pages middleware exists only to set `noindex, nofollow` on Cloudflare preview deployments.
+`npm run build` runs the fast Node tests, installs the checksum-verified pinned Rust toolchain in an isolated build location, compiles the locked Rust verifier, checks known SHA-256 vectors and agreement with Web Crypto, embeds the generated verifier bytes into the static client, and then creates `dist/`. A failure in any verifier-build step fails the deployment.
 
-The dual-verification feature branch temporarily compiles the Rust verifier during the Cloudflare preview build so it can be tested before production. That temporary preview compiler path is not part of the intended final production build; before release, the generated verifier artifact and dependency lockfile should be committed and the normal static build restored.
+Cloudflare Pages serves the resulting static application. No API, database binding, or backend proof service is required. The remaining Pages middleware exists only to set `noindex, nofollow` on Cloudflare preview deployments.
+
+GitHub Actions runs the fuller `npm run check` gate for pull requests and `main`, including Chromium mobile tests and the dual-verification flow in WebKit.
 
 A future service worker may cache the application shell for offline loading. It should cache application assets only, not user files, hashes, descriptions, recipient addresses, or generated ProofStamps.
