@@ -93,6 +93,8 @@ See [docs/architecture.md](docs/architecture.md) for the format and verification
 - `public/proofstamp-email-mark-vector.svg` combines a minimal envelope with the official PS seal using vector paths.
 - `public/proofstamp-seal.svg` preserves the official ProofStamp logo.
 
+The source code is licensed under the [MIT License](LICENSE). The ProofStamp name and branding are not licensed under MIT; see [TRADEMARKS.md](TRADEMARKS.md). Third-party assets retain their own licenses.
+
 ## Automated checks
 
 `npm test` runs the fast Node unit/security/version suite. Cloudflare runs this suite automatically as part of every `npm run build` before it deploys a preview or production build.
