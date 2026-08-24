@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm test && bash scripts/build-preview.sh && npm run build:static && npx playwright install chromium webkit",
+    "build": "npm test && bash scripts/build-rust-verifier.sh && npm run build:static && npx playwright install chromium webkit",
     "build:static": "node scripts/build.mjs",
     "test": "node --test",
     "test:e2e": "playwright test",
-    "check": "npm test && bash scripts/build-preview.sh && npm run build:static && npm run test:e2e"
+    "check": "npm test && bash scripts/build-rust-verifier.sh && npm run build:static && npm run test:e2e"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1"
