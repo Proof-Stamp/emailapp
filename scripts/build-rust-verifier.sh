@@ -22,13 +22,15 @@ case "$(uname -m)" in
     ;;
 esac
 
-RUSTUP_INIT="${TMPDIR:-/tmp}/proofstamp-rustup-init"
-RUSTUP_HOME="${TMPDIR:-/tmp}/proofstamp-rustup-home"
-CARGO_HOME="${TMPDIR:-/tmp}/proofstamp-cargo-home"
+# Keep executable toolchain files under HOME. Some hosted builders mount /tmp
+# with noexec, which would make a verified rustup binary impossible to run.
+RUSTUP_INIT="$HOME/.proofstamp-rustup-init"
+RUSTUP_HOME="$HOME/.proofstamp-rustup"
+CARGO_HOME="$HOME/.proofstamp-cargo"
 export RUSTUP_HOME CARGO_HOME
 export PATH="$CARGO_HOME/bin:$PATH"
 
-rm -rf "$RUSTUP_HOME" "$CARGO_HOME"
+rm -rf "$RUSTUP_HOME" "$CARGO_HOME" "$RUSTUP_INIT"
 curl --fail --location --proto '=https' --tlsv1.2 \
   "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUSTUP_HOST}/rustup-init" \
   --output "$RUSTUP_INIT"
@@ -56,3 +58,5 @@ cargo +"$RUST_VERSION" build \
 node scripts/check-rust-wasm.mjs "$WASM"
 node scripts/embed-rust-wasm.mjs "$WASM" "$GENERATED"
 node scripts/check-dual-hash.mjs
+
+rm -f "$RUSTUP_INIT"
