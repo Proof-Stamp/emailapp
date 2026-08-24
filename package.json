@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm test && bash scripts/build-rust-verifier.sh && npm run build:static && npx playwright install chromium webkit && npm run test:e2e -- --project=chromium-mobile",
+    "build": "npm test && bash scripts/build-rust-verifier.sh && npm run build:static && npx playwright install chromium webkit && npx playwright test e2e/dual-verification.spec.mjs --project=chromium-mobile",
     "build:static": "node scripts/build.mjs",
     "test": "node --test",
     "test:e2e": "playwright test",
