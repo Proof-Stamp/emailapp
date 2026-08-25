@@ -14,7 +14,6 @@ const description = $('#description')
 const primaryEmail = $('#primary-email')
 const secondEmail = $('#second-email')
 const includeFilename = $('#include-filename')
-const hashValue = $('#hash-value')
 
 let restored = false
 let savedState = readState()
@@ -53,7 +52,7 @@ function readState() {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw)
-    if (!parsed?.receipt?.files?.length || !parsed?.delivery?.primaryEmail) return null
+    if (!parsed?.receipt?.files?.length || !parsed?.delivery) return null
     return parsed
   } catch {
     return null
@@ -95,23 +94,21 @@ function fingerprintFiles() {
     const [sizeText, mediaType = 'application/octet-stream'] = detail.split(' · ')
     return { name, size: parseBytes(sizeText), mediaType }
   })
+  const fingerprintText = summaryValue('SHA-256 hash / file fingerprint') || summaryValue('SHA-256 hashes / file fingerprints')
+  const hashes = fingerprintText.match(/[0-9a-f]{64}/gi) || []
 
-  return String(hashValue?.textContent || '')
-    .split('\n')
-    .map((line) => line.match(/^\d+\.\s(.+?)\s{2}([0-9a-f]{64})$/i))
-    .filter(Boolean)
-    .map((match, index) => ({
-      hash: match[2].toLowerCase(),
-      file_name: includeFilename?.checked ? match[1] : null,
-      file_size_bytes: meta[index]?.size || 0,
-      media_type: meta[index]?.mediaType || 'application/octet-stream'
-    }))
+  return hashes.map((hash, index) => ({
+    hash: hash.toLowerCase(),
+    file_name: includeFilename?.checked ? (meta[index]?.name || null) : null,
+    file_size_bytes: meta[index]?.size || 0,
+    media_type: meta[index]?.mediaType || 'application/octet-stream'
+  }))
 }
 
 function captureState() {
   if (!receiptStage || receiptStage.hidden) return null
   const files = fingerprintFiles()
-  if (!files.length || !primaryEmail?.value.trim()) return null
+  if (!files.length) return null
 
   const state = {
     receipt: {
@@ -120,11 +117,11 @@ function captureState() {
       verification_url: 'https://email.proofstamp.org/verify'
     },
     delivery: {
-      primaryEmail: primaryEmail.value.trim(),
+      primaryEmail: primaryEmail?.value.trim() || '',
       secondEmail: secondEmail?.value.trim() || ''
     },
     summary: summaryRows(),
-    providerCount: providerCount?.textContent || '1 email address'
+    providerCount: providerCount?.textContent || 'Saved locally'
   }
   savedState = state
   safeSessionSet(RECEIPT_KEY, JSON.stringify(state))
@@ -204,7 +201,7 @@ function restoreState() {
   if (providerCount) providerCount.textContent = savedState.providerCount
 
   const intro = receiptStage.querySelector('.success-intro')
-  if (intro) intro.textContent = 'Your ProofStamp is ready to send.'
+  if (intro) intro.textContent = 'Your ProofStamp is ready. Email it, save it, or copy it.'
 
   if (safeSessionGet(EMAIL_OPENED_KEY) === '1') showEmailOpenedState({ showReturn: true })
   return true
@@ -254,7 +251,7 @@ function downloadRestoredReceipt() {
 function handleReceiptVisible() {
   if (!receiptStage || receiptStage.hidden) return
   const intro = receiptStage.querySelector('.success-intro')
-  if (intro) intro.textContent = 'Your ProofStamp is ready to send.'
+  if (intro) intro.textContent = 'Your ProofStamp is ready. Email it, save it, or copy it.'
   if (openEmailButton && safeSessionGet(EMAIL_OPENED_KEY) !== '1') openEmailButton.textContent = 'Email ProofStamp'
   ensureReturnUi()
   if (!restored) captureState()
