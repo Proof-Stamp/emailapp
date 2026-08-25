@@ -27,7 +27,7 @@ test.describe('email app return flow', () => {
     await createProofstamp(page)
 
     await expect(page.locator('#open-email')).toHaveText('Email ProofStamp')
-    await expect(page.locator('.success-intro')).toHaveText('Your ProofStamp is ready to send.')
+    await expect(page.locator('.success-intro')).toHaveText('Your ProofStamp is ready. Email it, save it, or copy it.')
     await expect.poll(() => page.evaluate(() => Boolean(sessionStorage.getItem('proofstamp.currentReceipt.v2')))).toBe(true)
 
     await page.evaluate(() => sessionStorage.setItem('proofstamp.emailOpened.v2', '1'))
