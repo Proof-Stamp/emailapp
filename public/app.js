@@ -11,7 +11,7 @@ const $ = (selector) => document.querySelector(selector)
 const els = {
   createTab: $('#create-tab'), verifyTab: $('#verify-tab'), createPanel: $('#create-panel'), verifyPanel: $('#verify-panel'),
   createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'),
-  addMoreFiles: $('#add-more-files'), hashStatus: $('#hash-status'),
+  addMoreFiles: $('#add-more-files'), hashStatusRow: $('#hash-status-row'), hashStatus: $('#hash-status'), fingerprintDetails: $('#fingerprint-details'), hashValue: $('#hash-value'),
   fileStage: $('#file-stage'), detailsStage: $('#details-stage'), receiptStage: $('#receipt-stage'), startOver: $('#start-over'),
   receiptForm: $('#receipt-form'), description: $('#description'),
   descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'), secondEmailField: $('#second-email-field'),
@@ -251,7 +251,13 @@ function renderCreateFiles() {
 
 function setHashStatus(message) {
   els.hashStatus.textContent = message
-  els.hashStatus.hidden = !message
+  els.hashStatusRow.hidden = !message
+}
+
+function hideFingerprintDetails() {
+  els.fingerprintDetails.hidden = true
+  els.fingerprintDetails.removeAttribute('open')
+  els.hashValue.textContent = ''
 }
 
 async function acceptFiles(fileList) {
@@ -289,6 +295,7 @@ async function removeCreateFile(index) {
     currentFileProofs = []
     hashFailures = new Set()
     els.detailsStage.hidden = true
+    hideFingerprintDetails()
     setHashStatus('')
     return
   }
@@ -315,6 +322,7 @@ function resetCreate({ move = true } = {}) {
   setSecondEmailVisible(false)
   els.includeFilename.checked = true
   els.descriptionCount.textContent = '0 / 500'
+  hideFingerprintDetails()
   setHashStatus('')
   clearCreateFieldErrors()
   showAlert(els.createAlert, '')
@@ -331,6 +339,7 @@ async function calculateHashes({ focusDetails = false } = {}) {
   const failures = new Set()
   showAlert(els.createAlert, '')
   els.detailsStage.hidden = true
+  hideFingerprintDetails()
 
   for (let index = 0; index < snapshot.length; index += 1) {
     if (generation !== hashGeneration) return
@@ -358,6 +367,10 @@ async function calculateHashes({ focusDetails = false } = {}) {
     return
   }
 
+  const fingerprintLines = proofs.map(({ file, hash }, index) => `${index + 1}. ${file.name || `File ${index + 1}`}  ${hash}`)
+  els.hashValue.textContent = fingerprintLines.join('\n')
+  els.hashValue.style.whiteSpace = 'pre-wrap'
+  els.fingerprintDetails.hidden = false
   setHashStatus(`${snapshot.length} ${snapshot.length === 1 ? 'file' : 'files'} ready ✓`)
   els.detailsStage.hidden = false
 
