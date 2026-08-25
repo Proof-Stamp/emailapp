@@ -68,7 +68,13 @@
 
             <div id="selected-files" class="selected-preview-grid" hidden></div>
             <label id="add-more-files" class="add-another-button" for="file-input" hidden>+ Add more</label>
-            <div id="hash-status" class="hash-status" role="status" aria-live="polite" hidden></div>
+            <div id="hash-status-row" class="hash-status" hidden>
+              <span id="hash-status" role="status" aria-live="polite"></span>
+              <details id="fingerprint-details" class="fingerprint-inline" hidden>
+                <summary>See file fingerprint (SHA-256)</summary>
+                <code id="hash-value"></code>
+              </details>
+            </div>
 
             <section id="captured-media-safety" class="capture-safety" aria-labelledby="capture-safety-title" hidden>
               <strong id="capture-safety-title">New camera or recorder file</strong>
