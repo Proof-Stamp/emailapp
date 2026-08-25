@@ -111,15 +111,16 @@ test.describe('Concept A mobile flow', () => {
     await expect(page.locator('#selected-files')).toContainText('photo-2.jpg')
   })
 
-  test('empty description moves focus and viewport to the description field', async ({ page }) => {
+  test('empty description is allowed and falls back to the filename', async ({ page }) => {
     await chooseAndReady(page)
     await page.locator('#primary-email').fill('person@example.com')
     await page.locator('button[type="submit"]').click()
 
-    const field = page.locator('#description')
-    await expect(field).toHaveAttribute('aria-invalid', 'true')
-    await expect(page.locator('#description-error')).toHaveText('Add a short description.')
-    await expectFocused(page, field)
+    await expect(page.locator('#receipt-stage')).toBeVisible()
+    await expect(page.locator('#description')).not.toHaveAttribute('aria-invalid', 'true')
+    await expect(page.locator('#description-error')).toHaveCount(0)
+    await expect(page.locator('#receipt-summary')).not.toContainText('Description')
+    await expect(page.locator('#receipt-summary')).toContainText('photo.jpg')
   })
 
   test('invalid primary email moves focus and viewport to the email field', async ({ page }) => {
@@ -130,7 +131,7 @@ test.describe('Concept A mobile flow', () => {
 
     const field = page.locator('#primary-email')
     await expect(field).toHaveAttribute('aria-invalid', 'true')
-    await expect(page.locator('#primary-email-error')).toHaveText('Enter a valid email address.')
+    await expect(page.locator('#primary-email-error')).toHaveText('Enter a valid email address or leave it blank.')
     await expectFocused(page, field)
   })
 
@@ -164,13 +165,13 @@ test.describe('Concept A mobile flow', () => {
     await expect(page.locator('#receipt-stage')).toBeVisible()
     await expect(readyTitle).toHaveText('ProofStamp ready')
     await expectFocused(page, readyTitle)
-    await expect(page.locator('.success-intro')).toHaveText('Your ProofStamp is ready to send.')
+    await expect(page.locator('.success-intro')).toHaveText('Your ProofStamp is ready. Email it, save it, or copy it.')
     await expect(page.locator('#open-email')).toHaveText('Email ProofStamp')
     await expect(page.locator('#copy-receipt')).toHaveText('Copy ProofStamp')
     await expect(page.locator('#download-receipt')).toHaveText('Save ProofStamp')
     await expect(page.locator('.email-cta-note')).toHaveText('Your email app will open with it ready to send.')
-    await expect(page.locator('.attach-note')).toContainText('Optional: attach the originals.')
-    await expect(page.locator('.attach-note')).toContainText('You attach them in your email app.')
+    await expect(page.locator('.attach-note')).toContainText('Optional: attach the originals before sending.')
+    await expect(page.locator('.attach-note')).toContainText('attach the original files in your email app')
     await expect(page.locator('.offline-note')).toContainText('No connection?')
     await expect(page.locator('#receipt-summary')).not.toContainText('Created at')
   })
