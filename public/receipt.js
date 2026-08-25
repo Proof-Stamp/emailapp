@@ -2,7 +2,7 @@ import { MAX_FILES_PER_PROOFSTAMP, isSha256 } from './hash.js'
 
 export const RECEIPT_SCHEMA = 'org.proofstamp.email-receipt'
 export const RECEIPT_VERSION = '2.1'
-export const APP_VERSION = '0.4.13'
+export const APP_VERSION = '0.4.14'
 export const VERIFICATION_URL = 'https://email.proofstamp.org/verify'
 export const CREATE_URL = 'https://email.proofstamp.org/'
 
@@ -130,8 +130,8 @@ function encodeMailtoBody(text) {
   return encodeURIComponent(withCrlf)
 }
 
-export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
-  if (!isValidEmail(primaryEmail)) throw new TypeError('A valid primary email is required.')
+export function createMailtoUrl({ receipt, primaryEmail = '', secondEmail = '' }) {
+  if (primaryEmail && !isValidEmail(primaryEmail)) throw new TypeError('The email address is invalid.')
   if (secondEmail && !isValidEmail(secondEmail)) throw new TypeError('The second email is invalid.')
 
   const subject = `ProofStamp: ${receipt.description.slice(0, 80)}`
@@ -140,7 +140,7 @@ export function createMailtoUrl({ receipt, primaryEmail, secondEmail = '' }) {
     `body=${encodeMailtoBody(receiptToText(receipt))}`
   ]
   if (secondEmail) params.push(`cc=${encodeURIComponent(secondEmail)}`)
-  return `mailto:${encodeURIComponent(primaryEmail)}?${params.join('&')}`
+  return `mailto:${primaryEmail ? encodeURIComponent(primaryEmail) : ''}?${params.join('&')}`
 }
 
 export function parseReceiptJson(text) {
