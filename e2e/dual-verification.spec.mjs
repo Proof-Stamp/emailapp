@@ -50,7 +50,14 @@ test('matching file is verified locally by both local methods without upload', a
 })
 
 test('verification info explains the two local methods and closes accessibly', async ({ page }) => {
-  await verifyAbc(page)
+  // This test owns the info-popover UI contract. The full local SHA-256 path is
+  // covered separately above, so put the result into the same successful state
+  // without making this UI regression test depend on worker/WASM startup again.
+  await page.goto('/verify')
+  await page.locator('#verify-result').evaluate((result) => {
+    result.hidden = false
+    result.className = 'verify-result match'
+  })
 
   const button = page.getByRole('button', { name: 'How local verification works' })
   const info = page.locator('#verify-method-info')
