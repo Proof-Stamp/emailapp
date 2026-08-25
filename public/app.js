@@ -384,7 +384,6 @@ function createReceipt() {
   clearCreateFieldErrors()
   showAlert(els.createAlert, '')
 
-  if (!description) return showFieldError(els.description, 'Add a short description.')
   if (primaryEmail && !isValidEmail(primaryEmail)) return showFieldError(els.primaryEmail, 'Enter a valid email address or leave it blank.')
   if (secondEmail && !primaryEmail) return showFieldError(els.secondEmail, 'Add the first email address before a second recipient.')
   if (secondEmail && !isValidEmail(secondEmail)) return showFieldError(els.secondEmail, 'Enter a valid second email address or remove it.')
@@ -432,7 +431,7 @@ function renderReceipt() {
   const rows = [
     ...(primaryEmail ? [['To', primaryEmail]] : []),
     ...(secondEmail ? [['CC', secondEmail]] : []),
-    ['Description', receipt.description],
+    ...(receipt.description ? [['Description', receipt.description]] : []),
     ['Files', receipt.files.length === 1 ? '1 file' : `${receipt.files.length} files`],
     ...(receipt.files.length === 1 && receipt.files[0].file_name ? [['Filename', receipt.files[0].file_name]] : []),
     [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
