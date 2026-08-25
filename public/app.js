@@ -11,9 +11,9 @@ const $ = (selector) => document.querySelector(selector)
 const els = {
   createTab: $('#create-tab'), verifyTab: $('#verify-tab'), createPanel: $('#create-panel'), verifyPanel: $('#verify-panel'),
   createAlert: $('#create-alert'), fileInput: $('#file-input'), dropZone: $('#drop-zone'), selectedFiles: $('#selected-files'),
-  addMoreFiles: $('#add-more-files'), hashStatus: $('#hash-status'),
+  addMoreFiles: $('#add-more-files'), hashStatusRow: $('#hash-status-row'), hashStatus: $('#hash-status'), fingerprintDetails: $('#fingerprint-details'), hashValue: $('#hash-value'),
   fileStage: $('#file-stage'), detailsStage: $('#details-stage'), receiptStage: $('#receipt-stage'), startOver: $('#start-over'),
-  hashValue: $('#hash-value'), copyHash: $('#copy-hash'), receiptForm: $('#receipt-form'), description: $('#description'),
+  receiptForm: $('#receipt-form'), description: $('#description'),
   descriptionCount: $('#description-count'), primaryEmail: $('#primary-email'), secondEmail: $('#second-email'), secondEmailField: $('#second-email-field'),
   addSecondEmail: $('#add-second-email'), removeSecondEmail: $('#remove-second-email'),
   includeFilename: $('#include-filename'), receiptSummary: $('#receipt-summary'), providerCount: $('#receipt-provider-count'),
@@ -251,7 +251,13 @@ function renderCreateFiles() {
 
 function setHashStatus(message) {
   els.hashStatus.textContent = message
-  els.hashStatus.hidden = !message
+  els.hashStatusRow.hidden = !message
+}
+
+function hideFingerprintDetails() {
+  els.fingerprintDetails.hidden = true
+  els.fingerprintDetails.removeAttribute('open')
+  els.hashValue.textContent = ''
 }
 
 async function acceptFiles(fileList) {
@@ -289,6 +295,7 @@ async function removeCreateFile(index) {
     currentFileProofs = []
     hashFailures = new Set()
     els.detailsStage.hidden = true
+    hideFingerprintDetails()
     setHashStatus('')
     return
   }
@@ -315,7 +322,7 @@ function resetCreate({ move = true } = {}) {
   setSecondEmailVisible(false)
   els.includeFilename.checked = true
   els.descriptionCount.textContent = '0 / 500'
-  els.hashValue.textContent = ''
+  hideFingerprintDetails()
   setHashStatus('')
   clearCreateFieldErrors()
   showAlert(els.createAlert, '')
@@ -332,6 +339,7 @@ async function calculateHashes({ focusDetails = false } = {}) {
   const failures = new Set()
   showAlert(els.createAlert, '')
   els.detailsStage.hidden = true
+  hideFingerprintDetails()
 
   for (let index = 0; index < snapshot.length; index += 1) {
     if (generation !== hashGeneration) return
@@ -362,6 +370,7 @@ async function calculateHashes({ focusDetails = false } = {}) {
   const fingerprintLines = proofs.map(({ file, hash }, index) => `${index + 1}. ${file.name || `File ${index + 1}`}  ${hash}`)
   els.hashValue.textContent = fingerprintLines.join('\n')
   els.hashValue.style.whiteSpace = 'pre-wrap'
+  els.fingerprintDetails.hidden = false
   setHashStatus(`${snapshot.length} ${snapshot.length === 1 ? 'file' : 'files'} ready ✓`)
   els.detailsStage.hidden = false
 
@@ -375,8 +384,8 @@ function createReceipt() {
   clearCreateFieldErrors()
   showAlert(els.createAlert, '')
 
-  if (!description) return showFieldError(els.description, 'Add a short description.')
-  if (!isValidEmail(primaryEmail)) return showFieldError(els.primaryEmail, 'Enter a valid email address.')
+  if (primaryEmail && !isValidEmail(primaryEmail)) return showFieldError(els.primaryEmail, 'Enter a valid email address or leave it blank.')
+  if (secondEmail && !primaryEmail) return showFieldError(els.secondEmail, 'Add the first email address before a second recipient.')
   if (secondEmail && !isValidEmail(secondEmail)) return showFieldError(els.secondEmail, 'Enter a valid second email address or remove it.')
   if (secondEmail && secondEmail.toLowerCase() === primaryEmail.toLowerCase()) {
     return showFieldError(els.secondEmail, 'Use a different address for the second recipient.')
@@ -420,9 +429,9 @@ function renderReceipt() {
     ? 'SHA-256 hash / file fingerprint'
     : 'SHA-256 hashes / file fingerprints'
   const rows = [
-    ['To', primaryEmail],
+    ...(primaryEmail ? [['To', primaryEmail]] : []),
     ...(secondEmail ? [['CC', secondEmail]] : []),
-    ['Description', receipt.description],
+    ...(receipt.description ? [['Description', receipt.description]] : []),
     ['Files', receipt.files.length === 1 ? '1 file' : `${receipt.files.length} files`],
     ...(receipt.files.length === 1 && receipt.files[0].file_name ? [['Filename', receipt.files[0].file_name]] : []),
     [receipt.files.length === 1 ? 'Size' : 'Total size', formatBytes(totalSize)],
@@ -439,7 +448,11 @@ function renderReceipt() {
     }
     return [dt, dd]
   }))
-  els.providerCount.textContent = secondEmail ? '2 email addresses' : '1 email address'
+  els.providerCount.textContent = secondEmail
+    ? '2 email addresses'
+    : primaryEmail
+      ? '1 email address'
+      : 'Saved locally'
 }
 
 function openEmail() {
@@ -592,7 +605,6 @@ els.removeSecondEmail.addEventListener('click', () => {
   moveTo(els.addSecondEmail, { focus: true, block: 'center' })
 })
 els.secondEmail.addEventListener('input', () => clearFieldError(els.secondEmail))
-els.copyHash.addEventListener('click', () => copyText(els.hashValue.textContent, els.copyHash, 'Copied'))
 els.receiptForm.addEventListener('submit', (event) => { event.preventDefault(); createReceipt() })
 els.openEmail.addEventListener('click', openEmail)
 els.copyReceipt.addEventListener('click', () => copyText(receiptToText(publicReceipt()), els.copyReceipt, 'Copied'))

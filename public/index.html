@@ -9,7 +9,7 @@
       content="Create a private ProofStamp for photos and files on your device, then email, copy, or save it. No upload. No account."
     />
     <title>ProofStamp for Photos and Files</title>
-    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.13" type="image/svg+xml" />
+    <link rel="icon" href="/proofstamp-seal.svg?v=0.4.14" type="image/svg+xml" />
     <link
       rel="preload"
       href="/fonts/source-serif-4-latin-variable.woff2"
@@ -17,18 +17,18 @@
       type="font/woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/styles.css?v=0.4.13" />
-    <link rel="stylesheet" href="/ux.css?v=0.4.13" />
-    <link rel="stylesheet" href="/concept-a.css?v=0.4.13" />
-    <link rel="stylesheet" href="/mobile-picker-safety.css?v=0.4.13" />
-    <link rel="stylesheet" href="/verify-info.css?v=0.4.13" />
+    <link rel="stylesheet" href="/styles.css?v=0.4.14" />
+    <link rel="stylesheet" href="/ux.css?v=0.4.14" />
+    <link rel="stylesheet" href="/concept-a.css?v=0.4.14" />
+    <link rel="stylesheet" href="/mobile-picker-safety.css?v=0.4.14" />
+    <link rel="stylesheet" href="/verify-info.css?v=0.4.14" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
 
     <header class="site-header compact-header">
       <a class="brand" href="/" aria-label="ProofStamp home">
-        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.13" width="41" height="41" alt="" />
+        <img class="brand-mark" src="/proofstamp-email-mark-vector.svg?v=0.4.14" width="41" height="41" alt="" />
         <span class="brand-copy">
           <strong>ProofStamp</strong>
           <small>via email</small>
@@ -68,7 +68,13 @@
 
             <div id="selected-files" class="selected-preview-grid" hidden></div>
             <label id="add-more-files" class="add-another-button" for="file-input" hidden>+ Add more</label>
-            <div id="hash-status" class="hash-status" role="status" aria-live="polite" hidden></div>
+            <div id="hash-status-row" class="hash-status" hidden>
+              <span id="hash-status" role="status" aria-live="polite"></span>
+              <details id="fingerprint-details" class="fingerprint-inline" hidden>
+                <summary>See file fingerprint (SHA-256)</summary>
+                <code id="hash-value"></code>
+              </details>
+            </div>
 
             <section id="captured-media-safety" class="capture-safety" aria-labelledby="capture-safety-title" hidden>
               <strong id="capture-safety-title">New camera or recorder file</strong>
@@ -80,24 +86,17 @@
 
           <section class="stage details-stage" id="details-stage" aria-labelledby="details-stage-title" hidden>
             <div class="stage-heading simple-stage-heading"><div><h2 id="details-stage-title">What are these files for?</h2></div><button id="start-over" class="text-button" type="button">Start over</button></div>
-            <details class="proof-details">
-              <summary>SHA-256 hash / file fingerprint</summary>
-              <div class="hash-card compact-hash-card">
-                <div class="hash-heading"><span>SHA-256 hashes / file fingerprints</span><button id="copy-hash" class="small-button" type="button">Copy</button></div>
-                <code id="hash-value"></code>
-              </div>
-            </details>
 
             <form id="receipt-form" novalidate>
               <div class="field">
-                <label for="description">Description <span>Required</span></label>
-                <textarea id="description" maxlength="500" rows="3" placeholder="Driveway before concrete removal" required></textarea>
-                <div class="field-meta"><small>Enough detail to recognize this later.</small><small id="description-count">0 / 500</small></div>
+                <label for="description">Description <span>Optional</span></label>
+                <textarea id="description" maxlength="500" rows="3" placeholder="Driveway before concrete removal"></textarea>
+                <div class="field-meta"><small>Add context if it will help you recognize this later.</small><small id="description-count">0 / 500</small></div>
               </div>
               <div class="field">
-                <label for="primary-email">Send to <span>Required</span></label>
-                <input id="primary-email" type="email" autocomplete="email" placeholder="name@example.com" required />
-                <small>Your email address stays in this browser.</small>
+                <label for="primary-email">Email to <span>Optional</span></label>
+                <input id="primary-email" type="email" autocomplete="email" placeholder="name@example.com" />
+                <small>Add an address to prefill the email, or leave blank to save or copy the ProofStamp.</small>
               </div>
               <button id="add-second-email" class="add-another-button optional-email-button" type="button">+ Add another recipient</button>
               <div class="field recommended-field" id="second-email-field" hidden>
@@ -112,20 +111,22 @@
           <section class="stage success-stage" id="receipt-stage" aria-labelledby="receipt-stage-title" hidden>
             <div class="success-mark" aria-hidden="true">✓</div>
             <h2 id="receipt-stage-title">ProofStamp ready</h2>
-            <p class="success-intro">Your ProofStamp is ready to send.</p>
+            <p class="success-intro">Your ProofStamp is ready. Email it, save it, or copy it.</p>
+            <div class="action-grid final-actions">
+              <button id="open-email" class="primary-button" type="button">Email ProofStamp</button>
+            </div>
+            <p class="email-cta-note">Your email app will open with it ready to send.</p>
+            <div class="attach-note"><strong>Optional: attach the originals before sending.</strong><p>If you email the ProofStamp, attach the original files in your email app before you send it.</p></div>
+            <div class="action-grid final-actions">
+              <button id="download-receipt" class="secondary-button" type="button">Save ProofStamp</button>
+              <button id="copy-receipt" class="secondary-button" type="button">Copy ProofStamp</button>
+            </div>
             <div class="receipt-preview">
-              <div class="receipt-preview-header"><span>ProofStamp</span><span id="receipt-provider-count">1 email address</span></div>
+              <div class="receipt-preview-header"><span>ProofStamp</span><span id="receipt-provider-count">Saved locally</span></div>
               <dl id="receipt-summary"></dl>
               <p class="hash-value-note">The SHA-256 hash is the file's unique fingerprint. The same hash later confirms the file has not changed.</p>
             </div>
-            <div class="action-grid final-actions">
-              <button id="open-email" class="primary-button" type="button">Email ProofStamp</button>
-              <button id="copy-receipt" class="secondary-button" type="button">Copy ProofStamp</button>
-              <button id="download-receipt" class="secondary-button" type="button">Save ProofStamp</button>
-            </div>
-            <p class="email-cta-note">Your email app will open with it ready to send.</p>
-            <div class="attach-note"><strong>Optional: attach the originals.</strong><p>Keep the originals with the ProofStamp in the same email. You attach them in your email app.</p></div>
-            <p class="offline-note">No connection? Copy or save the ProofStamp now and send the email later.</p>
+            <p class="offline-note">No connection? Save or copy the ProofStamp now. You can email it later.</p>
             <div class="keep-file-note"><strong>Keep the exact original files.</strong><p>You will need them if you want to check the ProofStamp later.</p></div>
             <button id="create-another" class="text-button centered" type="button">Create another</button>
           </section>
@@ -169,7 +170,7 @@
     </main>
 
     <footer class="site-footer">
-      <span>ProofStamp · v0.4.13</span>
+      <span>ProofStamp · v0.4.14</span>
       <nav aria-label="Footer navigation">
         <a href="mailto:info@proofstamp.org?subject=ProofStamp%20feedback">Feedback</a>
         <a href="https://proofstamp.org/what-is-a-hash-function-sha-256-explained/">Learn about SHA-256</a>
@@ -179,9 +180,9 @@
     </footer>
 
     <noscript><div class="noscript-note">ProofStamp needs JavaScript to calculate SHA-256 on your device. Your files are not uploaded.</div></noscript>
-    <script type="module" src="/media-preservation.js?v=0.4.13"></script>
-    <script type="module" src="/app.js?v=0.4.13"></script>
-    <script type="module" src="/verify-info.js?v=0.4.13"></script>
-    <script type="module" src="/return-flow.js?v=0.4.13"></script>
+    <script type="module" src="/media-preservation.js?v=0.4.14"></script>
+    <script type="module" src="/app.js?v=0.4.14"></script>
+    <script type="module" src="/verify-info.js?v=0.4.14"></script>
+    <script type="module" src="/return-flow.js?v=0.4.14"></script>
   </body>
 </html>
