@@ -1,6 +1,6 @@
 /* Concept A: mobile-first local utility */
 
-.hash-status[hidden],
+#hash-status-row[hidden],
 #add-more-files[hidden],
 #details-stage[hidden],
 #receipt-stage[hidden] {
@@ -158,6 +158,11 @@
 }
 
 .hash-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem 1rem;
+  flex-wrap: wrap;
   margin-top: .85rem;
   padding: .7rem .8rem;
   border-radius: .7rem;
@@ -165,6 +170,37 @@
   color: var(--green-dark, #00644b);
   font-weight: 750;
   font-size: .9rem;
+}
+
+.fingerprint-inline {
+  margin: 0;
+  min-width: 0;
+}
+
+.fingerprint-inline > summary {
+  cursor: pointer;
+  color: inherit;
+  font-size: .84rem;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.fingerprint-inline[open] {
+  flex-basis: 100%;
+}
+
+.fingerprint-inline code {
+  display: block;
+  margin-top: .6rem;
+  padding-top: .6rem;
+  border-top: 1px solid rgba(0, 100, 75, .16);
+  color: var(--navy, #071b2c);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: .78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .details-stage {
