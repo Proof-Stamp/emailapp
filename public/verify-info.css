@@ -11,6 +11,18 @@
   padding-right: 4.1rem;
 }
 
+/* The main tool shell clips its contents to preserve rounded corners. While the
+   verification explainer is open, allow the popover to escape that clipping
+   boundary. The tabs keep their own clipping so the shell corners stay clean. */
+.tool-shell.verify-info-open {
+  overflow: visible;
+}
+
+.tool-shell.verify-info-open > .tabs {
+  overflow: hidden;
+  border-radius: 1.35rem 1.35rem 0 0;
+}
+
 .verify-method-info-button {
   position: absolute;
   top: .8rem;
@@ -92,6 +104,10 @@
 }
 
 @media (max-width: 700px) {
+  .tool-shell.verify-info-open > .tabs {
+    border-radius: .9rem .9rem 0 0;
+  }
+
   .verify-result.match {
     padding-right: 4.35rem;
   }

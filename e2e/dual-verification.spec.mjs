@@ -7,11 +7,19 @@ const abcFile = {
   buffer: Buffer.from('abc')
 }
 
+async function waitForVerificationResult(page) {
+  // WebKit can take longer than Playwright's default 5s expectation timeout on
+  // a cold CI worker while it starts the module worker and instantiates WASM.
+  // Wait for the actual result boundary rather than assuming a fixed startup time.
+  await expect(page.locator('#verify-result')).toBeVisible({ timeout: 15_000 })
+}
+
 async function verifyAbc(page) {
   await page.goto('/verify')
   await page.locator('#verify-file').setInputFiles(abcFile)
   await page.locator('#expected-hash').fill(abcHash)
   await page.locator('#verify-button').click()
+  await waitForVerificationResult(page)
   await expect(page.locator('#verify-result-title')).toHaveText('Verified locally')
   await expect(page.locator('#verify-result-copy')).toContainText('Two different local methods produced the same fingerprint')
   await expect(page.locator('#verify-result-copy')).toContainText('Nothing was uploaded')
@@ -27,6 +35,7 @@ test('matching file is verified locally by both local methods without upload', a
   page.on('request', (request) => requestsDuringVerification.push(request))
   await page.locator('#verify-button').click()
 
+  await waitForVerificationResult(page)
   await expect(page.locator('#verify-result-title')).toHaveText('Verified locally')
   await expect(page.locator('#verify-result-copy')).toContainText('Two different local methods produced the same fingerprint')
   await expect(page.locator('#verify-result-copy')).toContainText('Nothing was uploaded')
@@ -41,10 +50,18 @@ test('matching file is verified locally by both local methods without upload', a
 })
 
 test('verification info explains the two local methods and closes accessibly', async ({ page }) => {
-  await verifyAbc(page)
+  // This test owns the info-popover UI contract. The full local SHA-256 path is
+  // covered separately above, so put the result into the same successful state
+  // without making this UI regression test depend on worker/WASM startup again.
+  await page.goto('/verify')
+  await page.locator('#verify-result').evaluate((result) => {
+    result.hidden = false
+    result.className = 'verify-result match'
+  })
 
   const button = page.getByRole('button', { name: 'How local verification works' })
   const info = page.locator('#verify-method-info')
+  const toolShell = page.locator('.tool-shell')
 
   await expect(button).toBeVisible()
   await expect(button).toHaveAttribute('aria-expanded', 'false')
@@ -52,6 +69,8 @@ test('verification info explains the two local methods and closes accessibly', a
 
   await expect(button).toHaveAttribute('aria-expanded', 'true')
   await expect(info).toBeVisible()
+  await expect(toolShell).toHaveClass(/verify-info-open/)
+  await expect.poll(() => toolShell.evaluate((element) => getComputedStyle(element).overflow)).toBe('visible')
   await expect(info).toContainText('browser’s built-in cryptography')
   await expect(info).toContainText('Rust-based implementation')
   await expect(info).toContainText('If they disagree, verification stops')
@@ -60,6 +79,7 @@ test('verification info explains the two local methods and closes accessibly', a
   await page.keyboard.press('Escape')
   await expect(info).toBeHidden()
   await expect(button).toHaveAttribute('aria-expanded', 'false')
+  await expect(toolShell).not.toHaveClass(/verify-info-open/)
   await expect(button).toBeFocused()
 })
 
@@ -85,6 +105,7 @@ test('agreed local hash that differs from the ProofStamp stays a mismatch', asyn
   await page.locator('#expected-hash').fill('0'.repeat(64))
   await page.locator('#verify-button').click()
 
+  await waitForVerificationResult(page)
   await expect(page.locator('#verify-result-title')).toHaveText('0 of 1 files match')
   await expect(page.locator('#verify-result')).toHaveClass(/mismatch/)
   await expect(page.locator('#actual-hash')).toContainText(abcHash)
