@@ -45,6 +45,7 @@ test('verification info explains the two local methods and closes accessibly', a
 
   const button = page.getByRole('button', { name: 'How local verification works' })
   const info = page.locator('#verify-method-info')
+  const toolShell = page.locator('.tool-shell')
 
   await expect(button).toBeVisible()
   await expect(button).toHaveAttribute('aria-expanded', 'false')
@@ -52,6 +53,8 @@ test('verification info explains the two local methods and closes accessibly', a
 
   await expect(button).toHaveAttribute('aria-expanded', 'true')
   await expect(info).toBeVisible()
+  await expect(toolShell).toHaveClass(/verify-info-open/)
+  await expect.poll(() => toolShell.evaluate((element) => getComputedStyle(element).overflow)).toBe('visible')
   await expect(info).toContainText('browser’s built-in cryptography')
   await expect(info).toContainText('Rust-based implementation')
   await expect(info).toContainText('If they disagree, verification stops')
@@ -60,6 +63,7 @@ test('verification info explains the two local methods and closes accessibly', a
   await page.keyboard.press('Escape')
   await expect(info).toBeHidden()
   await expect(button).toHaveAttribute('aria-expanded', 'false')
+  await expect(toolShell).not.toHaveClass(/verify-info-open/)
   await expect(button).toBeFocused()
 })
 
