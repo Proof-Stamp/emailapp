@@ -28,10 +28,12 @@ test('email composer can open without a prefilled recipient', () => {
   assert.match(url, /body=/)
 })
 
-test('details step does not repeat the fingerprint panel', async () => {
+test('details step keeps the fingerprint out of the form and exposes it from the ready status', async () => {
   const html = await readFile(indexPath, 'utf8')
 
   assert.doesNotMatch(html, /class="proof-details"/)
   assert.doesNotMatch(html, /id="copy-hash"/)
-  assert.doesNotMatch(html, /id="hash-value"/)
+  assert.match(html, /id="hash-status-row"/)
+  assert.match(html, /See file fingerprint \(SHA-256\)/)
+  assert.match(html, /id="hash-value"/)
 })
