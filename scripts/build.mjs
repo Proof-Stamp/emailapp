@@ -9,8 +9,8 @@ const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'ut
 const appVersion = packageJson.version
 
 const canonicalUrl = 'https://email.proofstamp.org/'
-const pageTitle = 'ProofStamp via Email | Proof Photos & Files Privately'
-const pageDescription = 'Create SHA-256 fingerprints for photos and files on your device, then email, copy, or save the ProofStamp. No upload, no account, no registration.'
+const pageTitle = 'ProofStamp via Email | ProofStamp Photos & Files Privately'
+const pageDescription = 'ProofStamp photos and files privately on your device, then email, copy, or save the ProofStamp. No upload, no account, no registration.'
 
 const structuredData = {
   '@context': 'https://schema.org',
@@ -22,7 +22,7 @@ const structuredData = {
       url: 'https://proofstamp.org/',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://email.proofstamp.org/proofstamp-seal.svg'
+        url: 'https://email.proofstamp.org/brand/proofstamp-icon.svg'
       }
     },
     {
@@ -61,7 +61,7 @@ const jsonLdText = JSON.stringify(structuredData)
 const jsonLdCspHash = sha256CspSource(jsonLdText)
 
 function addHomeSeo(html) {
-  const socialImage = 'https://email.proofstamp.org/proofstamp-email-mark-vector.svg'
+  const socialImage = 'https://email.proofstamp.org/brand/proofstamp-wordmark-blue.svg'
   const seoHead = `    <link rel="canonical" href="${canonicalUrl}" />
     <meta name="robots" content="index, follow" />
     <meta property="og:type" content="website" />
@@ -84,8 +84,8 @@ function addHomeSeo(html) {
     )
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${pageTitle}</title>`)
     .replace(
-      /    <link rel="icon" href="\/proofstamp-seal\.svg(?:\?v=[^"]+)?" type="image\/svg\+xml" \/>/,
-      `${seoHead}\n    <link rel="icon" href="/proofstamp-seal.svg" type="image/svg+xml" />`
+      /    <link rel="icon" href="\/brand\/proofstamp-icon\.svg(?:\?v=[^"]+)?" type="image\/svg\+xml" \/>/,
+      `${seoHead}\n    <link rel="icon" href="/brand/proofstamp-icon.svg" type="image/svg+xml" />`
     )
 }
 

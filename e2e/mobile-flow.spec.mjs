@@ -42,7 +42,7 @@ test.describe('Concept A mobile flow', () => {
 
   test('starts with one file picker and keeps the privacy promise concise', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('#hero-title')).toHaveText('Proof a photo or file by email.')
+    await expect(page.locator('#hero-title')).toHaveText('ProofStamp a photo or file by email.')
     await expect(page.locator('#camera-input')).toHaveCount(0)
     await expect(page.locator('#drop-zone')).toContainText('Choose photos or files')
     await expect(page.locator('#file-stage')).toContainText('Preview your selection')
