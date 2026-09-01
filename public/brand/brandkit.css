@@ -1,0 +1,404 @@
+/* ProofStamp brandkit v1.1 integration.
+   Loaded after the legacy app styles so the product can adopt the canonical
+   identity without changing hashing, receipt, email, or verification logic. */
+
+:root {
+  --navy: var(--ps-blue);
+  --navy-soft: var(--ps-blue-hover);
+  --green: var(--ps-blue);
+  --green-dark: var(--ps-blue-hover);
+  --green-pale: var(--ps-tint);
+  --cream: var(--ps-white);
+  --paper: var(--ps-white);
+  --ink: var(--ps-graphite);
+  --muted: var(--ps-muted);
+  --line: var(--ps-border);
+  --danger: var(--ps-danger);
+  --danger-pale: #FAEFEE;
+  --shadow: 0 12px 36px rgba(22, 45, 82, .08);
+}
+
+body {
+  background: var(--ps-white);
+  color: var(--ps-graphite);
+  font-family: var(--ps-font-sans);
+}
+
+button,
+input,
+textarea {
+  font-family: var(--ps-font-sans);
+}
+
+code,
+#hash-value,
+#receipt-summary .receipt-hash,
+.verify-result code {
+  font-family: var(--ps-font-mono);
+}
+
+.site-header,
+.site-footer {
+  width: min(1120px, calc(100% - 40px));
+  max-width: 1120px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.site-header {
+  min-height: 78px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--ps-border);
+}
+
+.brand {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+  color: var(--ps-blue);
+}
+
+.brand-wordmark {
+  display: block;
+  width: 190px;
+  height: auto;
+}
+
+.brand-channel {
+  color: var(--ps-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.hero,
+.compact-hero {
+  width: min(880px, calc(100% - 40px));
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 0 32px;
+  text-align: left;
+}
+
+.hero h1,
+.compact-hero h1,
+.stage h2,
+.verify-intro h2,
+.explanation h2 {
+  color: var(--ps-blue);
+  font-family: var(--ps-font-sans);
+}
+
+.hero h1,
+.compact-hero h1 {
+  max-width: 760px;
+  margin: 0 0 10px;
+  font-size: clamp(2.45rem, 6vw, 4.25rem);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -.04em;
+}
+
+.hero > p,
+.compact-hero p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--ps-muted);
+  font-size: 1rem;
+}
+
+.stage h2,
+.verify-intro h2,
+.explanation h2 {
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+.eyebrow,
+.stage-kicker {
+  color: var(--ps-blue);
+}
+
+.tool-shell,
+.mobile-tool-shell {
+  border: 1px solid var(--ps-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.tabs {
+  border-bottom-color: var(--ps-border);
+  background: var(--ps-surface);
+}
+
+.tab {
+  color: var(--ps-muted);
+  font-weight: 600;
+}
+
+.tab.active {
+  border-bottom-color: var(--ps-blue);
+  background: var(--ps-white);
+  color: var(--ps-blue);
+}
+
+.primary-button,
+.secondary-button,
+.small-button,
+.add-another-button {
+  border-radius: 8px;
+}
+
+.primary-button {
+  background: var(--ps-blue);
+  box-shadow: none;
+  color: var(--ps-white);
+  font-weight: 600;
+}
+
+.primary-button:hover {
+  background: var(--ps-blue-hover);
+}
+
+.capture-button.primary-button {
+  border: 1px dashed #AEB8C4;
+  background: var(--ps-surface);
+  color: var(--ps-blue);
+}
+
+.capture-button.primary-button:hover {
+  border-color: var(--ps-blue);
+  background: var(--ps-tint);
+}
+
+.secondary-button,
+.small-button,
+.add-another-button {
+  border-color: var(--ps-border);
+  background: var(--ps-white);
+  color: var(--ps-blue);
+}
+
+.secondary-button:hover,
+.small-button:hover,
+.add-another-button:hover {
+  border-color: var(--ps-blue);
+  background: var(--ps-tint);
+}
+
+.text-button,
+.add-another-button,
+.proof-details > summary,
+.fingerprint-inline > summary {
+  color: var(--ps-blue);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+.add-another-button:focus-visible,
+.verify-method-info-button:focus-visible {
+  outline: 3px solid rgba(22, 45, 82, .18);
+  outline-offset: 2px;
+}
+
+.field input,
+.field textarea,
+.file-control {
+  border-color: var(--ps-border);
+  border-radius: 8px;
+  color: var(--ps-graphite);
+}
+
+.field input:focus,
+.field textarea:focus,
+.file-control:focus {
+  border-color: var(--ps-blue);
+  box-shadow: 0 0 0 3px rgba(22, 45, 82, .10);
+}
+
+.drop-zone {
+  border-color: #AEB8C4;
+  border-radius: 12px;
+  background: var(--ps-surface);
+}
+
+.drop-zone:hover,
+.drop-zone.dragging {
+  border-color: var(--ps-blue);
+  background: var(--ps-tint);
+}
+
+.upload-icon {
+  border: 1px solid var(--ps-blue);
+  background: var(--ps-white);
+  color: var(--ps-blue);
+}
+
+.file-preview {
+  background: var(--ps-surface);
+  color: var(--ps-muted);
+}
+
+.preview-file .icon-button {
+  border-color: var(--ps-border);
+  box-shadow: 0 2px 10px rgba(22, 45, 82, .10);
+}
+
+.hash-status,
+.hash-card {
+  border-color: #C9D3DF;
+  background: var(--ps-tint);
+  color: var(--ps-blue);
+}
+
+.hash-status {
+  border: 1px solid #C9D3DF;
+}
+
+.hash-card code,
+.hash-status code,
+#receipt-summary .receipt-hash,
+.result code {
+  color: var(--ps-blue);
+}
+
+.fingerprint-inline code {
+  border-top-color: rgba(22, 45, 82, .14);
+  color: var(--ps-blue);
+}
+
+#receipt-summary .receipt-hash-label {
+  color: var(--ps-blue);
+}
+
+.success-stage {
+  color: var(--ps-graphite);
+}
+
+.success-mark {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 0;
+  background: url('/brand/proof-point-card-marker.svg') center / contain no-repeat;
+  color: transparent;
+  font-size: 0;
+}
+
+.receipt-preview {
+  border-color: var(--ps-border);
+  border-radius: 12px;
+}
+
+.receipt-preview-header {
+  background: var(--ps-blue);
+}
+
+.receipt-preview dd {
+  color: var(--ps-graphite);
+}
+
+.attach-note,
+.offline-note,
+.keep-file-note {
+  border-color: var(--ps-border);
+  background: var(--ps-surface);
+}
+
+.verify-result {
+  border-radius: 12px;
+}
+
+.verify-result.match {
+  border-color: rgba(31, 107, 69, .28);
+  background: #F0F7F3;
+}
+
+.verify-result.match .verify-result-icon {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: url('/brand/proof-point-card-marker.svg') center / contain no-repeat;
+  color: transparent;
+  font-size: 0;
+}
+
+.verify-result.mismatch {
+  border-color: rgba(166, 58, 50, .24);
+  background: #FAEFEE;
+}
+
+.verify-result.mismatch .verify-result-icon {
+  color: var(--ps-danger);
+}
+
+.verify-result h3 {
+  color: var(--ps-graphite);
+}
+
+.verify-method-info-button,
+.verify-method-info {
+  border-color: var(--ps-border);
+  color: var(--ps-blue);
+}
+
+.verify-method-info::before {
+  border-color: var(--ps-border);
+}
+
+.limitation {
+  border-radius: 12px;
+  background: var(--ps-blue);
+}
+
+.site-footer {
+  border-top-color: var(--ps-border);
+}
+
+.site-footer a:hover {
+  color: var(--ps-blue-hover);
+}
+
+@media (max-width: 700px) {
+  .site-header,
+  .site-footer,
+  .hero,
+  .compact-hero {
+    width: min(100% - 32px, 880px);
+  }
+
+  .site-header.compact-header {
+    min-height: 74px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .brand-wordmark {
+    width: 164px;
+  }
+
+  .hero,
+  .compact-hero {
+    margin-top: 0;
+    padding: 38px 0 26px;
+  }
+
+  .hero h1,
+  .compact-hero h1 {
+    font-size: clamp(2.15rem, 10vw, 3rem);
+    letter-spacing: -.04em;
+  }
+
+  .mobile-tool-shell {
+    border-radius: 12px;
+  }
+
+  .tool-shell.verify-info-open > .tabs {
+    border-radius: 12px 12px 0 0;
+  }
+}
