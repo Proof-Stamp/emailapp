@@ -42,7 +42,7 @@ test.describe('email app return flow', () => {
 
     await page.locator('#return-verify').click()
     await expect(page.locator('#verify-panel')).toBeVisible()
-    await expect(page.locator('#expected-hash')).toHaveValue(/PROOFSTAMP/)
+    await expect(page.locator('#expected-hash')).toHaveValue(/ProofStamp͘/)
     await expect(page.locator('#expected-hash')).toHaveValue(/Apartment condition before moving out/)
     await expect(page.locator('#expected-hash')).toHaveValue(/return-photo\.jpg/)
     expect(apiRequests).toEqual([])
@@ -71,6 +71,8 @@ test.describe('email app return flow', () => {
 
     const mailto = new URL(openCalls[0].url)
     const body = mailto.searchParams.get('body')
+    expect(body.startsWith('ProofStamp͘\r\n')).toBe(true)
+    expect(mailto.searchParams.get('subject')).toBe('ProofStamp: Apartment condition before moving out')
     expect(body).toContain('The email received time shows when this ProofStamp reached the inbox.')
     expect(body).not.toContain('Created at:')
 
