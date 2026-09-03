@@ -2,9 +2,9 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_VERSION } from '../public/receipt.js'
+import { addModuleReleaseVersion, addReleaseVersion } from '../scripts/release-version.mjs'
 
-function assertSourceReleaseSync(html, version) {
+function assertBuiltHtmlReleaseSync(html, version) {
   assert.match(html, new RegExp(`ProofStamp · v${version.replaceAll('.', '\\.')}`))
 
   const localAssets = Array.from(
@@ -21,16 +21,31 @@ function assertSourceReleaseSync(html, version) {
   })
 }
 
-test('package, receipt, source HTML, and build release versions stay in sync', async () => {
+test('package.json is the single release-version source for built assets and receipts', async () => {
   const root = resolve(import.meta.dirname, '..')
   const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'))
   const buildScript = await readFile(resolve(root, 'scripts/build.mjs'), 'utf8')
   const homeHtml = await readFile(resolve(root, 'public/index.html'), 'utf8')
+  const receiptSource = await readFile(resolve(root, 'public/receipt.js'), 'utf8')
 
-  assert.equal(APP_VERSION, packageJson.version)
-  assertSourceReleaseSync(homeHtml, packageJson.version)
-  assert.match(buildScript, /ProofStamp · v\$\{appVersion\}/)
-  assert.match(buildScript, /\?v=\$\{appVersion\}/)
+  assert.match(buildScript, /const appVersion = packageJson\.version/)
+  assert.match(buildScript, /addReleaseVersion\([^\n]+, appVersion\)/)
+  assert.match(buildScript, /addModuleReleaseVersion\(receiptSource, appVersion\)/)
+  assert.doesNotMatch(receiptSource, /export const APP_VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/)
+
+  const builtHtml = addReleaseVersion(homeHtml, packageJson.version)
+  assertBuiltHtmlReleaseSync(builtHtml, packageJson.version)
+
+  const builtReceipt = addModuleReleaseVersion(receiptSource, packageJson.version)
+  assert.match(
+    builtReceipt,
+    new RegExp(`export const APP_VERSION = '${packageJson.version.replaceAll('.', '\\.')}'`)
+  )
+
+  // Prove stale source markup cannot force a release mismatch on the next bump.
+  const probeVersion = '9.8.7'
+  assertBuiltHtmlReleaseSync(addReleaseVersion(homeHtml, probeVersion), probeVersion)
+  assert.match(addModuleReleaseVersion(receiptSource, probeVersion), /export const APP_VERSION = '9\.8\.7'/)
 })
 
 test('Cloudflare build command gates preview deploys on fast tests', async () => {
