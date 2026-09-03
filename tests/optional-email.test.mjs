@@ -36,6 +36,23 @@ test('email composer can open without a prefilled recipient', () => {
   assert.match(url, /body=/)
 })
 
+test('human-readable receipt and mailto body preserve the plain-text signature', () => {
+  const receipt = createReceipt({
+    hash,
+    description: 'Unicode signature check',
+    fileName: 'example.txt',
+    fileSizeBytes: 12,
+    mediaType: 'text/plain'
+  })
+
+  const text = receiptToText(receipt)
+  assert.equal(text.split('\n')[0], 'ProofStamp͘')
+
+  const mailto = new URL(createMailtoUrl({ receipt }))
+  assert.equal(mailto.searchParams.get('body').split('\r\n')[0], 'ProofStamp͘')
+  assert.equal(mailto.searchParams.get('subject'), 'ProofStamp: Unicode signature check')
+})
+
 test('blank description falls back to the filename when it is included', () => {
   const receipt = createReceipt({
     hash,
