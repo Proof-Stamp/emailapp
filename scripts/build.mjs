@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { addScriptHashToCsp, sha256CspSource } from './csp.mjs'
+import { addModuleReleaseVersion, addReleaseVersion } from './release-version.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const source = resolve(root, 'public')
@@ -89,19 +90,17 @@ function addHomeSeo(html) {
     )
 }
 
-function addReleaseVersion(html) {
-  return html
-    .replace(/<span>ProofStamp(?: · v[0-9.]+)?<\/span>/, `<span>ProofStamp · v${appVersion}</span>`)
-    .replace(/(href|src)="(\/[^"?]+\.(?:css|js|svg))(?:\?v=[^"]+)?"/g, `$1="$2?v=${appVersion}"`)
-}
-
 await rm(destination, { recursive: true, force: true })
 await mkdir(destination, { recursive: true })
 await cp(source, destination, { recursive: true })
 
 const homePath = resolve(destination, 'index.html')
-const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')))
+const homeHtml = addReleaseVersion(addHomeSeo(await readFile(homePath, 'utf8')), appVersion)
 await writeFile(homePath, homeHtml)
+
+const receiptPath = resolve(destination, 'receipt.js')
+const receiptSource = await readFile(receiptPath, 'utf8')
+await writeFile(receiptPath, addModuleReleaseVersion(receiptSource, appVersion))
 
 // Cloudflare Pages serves /verify from verify.html without changing the URL.
 // This avoids the old SPA/root rewrite and gives the verifier a real route.
